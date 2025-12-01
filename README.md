@@ -10,9 +10,16 @@ A Model Context Protocol (MCP) server for the Liara cloud platform. This server 
 
 - **App Management**: Create, deploy, start, stop, restart, and delete apps across 14+ platforms
 - **Environment Variables**: Set and update environment variables for apps
-- **Deployment**: Deploy releases to apps
+- **Deployment**: Deploy releases, upload sources, rollback to previous versions
 - **Database Management**: Create, manage, and backup databases (MySQL, PostgreSQL, MongoDB, Redis, etc.)
-- **Object Storage**: Manage S3-compatible storage buckets
+- **Object Storage**: Manage S3-compatible storage buckets and objects
+- **DNS Management**: Complete DNS zone and record management
+- **Domain Management**: Add, remove, and verify domains for apps
+- **Disk Management**: Create and manage disks with FTP access
+- **Mail Servers**: Create and manage mail servers, send emails
+- **Virtual Machines (IaaS)**: Full VM lifecycle management with snapshots
+- **Network Management**: Create and manage networks for VMs
+- **Observability**: Retrieve app metrics and logs
 - **Plans**: List and view available resource plans
 
 ### Supported Platforms
@@ -65,9 +72,10 @@ LIARA_API_BASE_URL=https://api.iran.liara.ir
 
 ### Getting Your API Token
 
-1. Log in to [Liara Console](https://console.liara.ir)
-2. Navigate to the API section in your account menu
-3. Click "Create new key" to generate your API token
+1. Go directly to the [API section](https://console.liara.ir/API) in Liara Console (or log in to [Liara Console](https://console.liara.ir) and navigate to the API section)
+2. Select an expiration timeline for your API key (options: 1 hour, 1 day, 7 days, 1 month, 6 months, or 1 year)
+3. Click "Create new key" (ساخت کلید جدید) to generate your API token
+4. Copy the generated token immediately - it will only be shown once
 
 ### Team ID (Optional)
 
@@ -337,10 +345,41 @@ The server provides user-friendly error messages for common scenarios:
 
 MIT
 
+## API Coverage
+
+This MCP server implements comprehensive coverage of the [Liara API](https://openapi.liara.ir), including:
+
+### Implemented Services (15 modules, 70+ tools)
+
+- **Apps** - Full lifecycle management (create, deploy, start, stop, restart, resize)
+- **Databases** - Complete database management with backup/restore (8 database types)
+- **Deployment** - Source upload, release management, rollback
+- **Environment Variables** - Set, get, delete environment variables
+- **Object Storage** - S3-compatible bucket and object management
+- **Disks** - Disk management with FTP access
+- **DNS** - Complete DNS zone and record management
+- **Domains** - Domain management and verification
+- **Mail Servers** - Mail server management and email sending
+- **Virtual Machines (IaaS)** - VM lifecycle, snapshots, network attachment
+- **Networks** - Network management for VMs
+- **Observability** - Metrics and logs retrieval
+- **Plans** - Resource plan information
+- **Settings** - App configuration (zero-downtime, subdomain, IP, read-only)
+- **User** - User account information
+
+### API Documentation Reference
+
+This implementation is based on the [Liara OpenAPI specification](https://openapi.liara.ir) and covers:
+- All major platform services (PaaS, DBaaS, IaaS, Object Storage, DNS, Mail)
+- CI/CD capabilities through deployment tools
+- Complete resource lifecycle management
+- Error handling aligned with Liara API responses
+
 ## Resources
 
 - [Liara Documentation](https://docs.liara.ir)
 - [Liara API Reference](https://openapi.liara.ir)
+- [Liara Console](https://console.liara.ir)
 - [Model Context Protocol](https://modelcontextprotocol.io)
 
 ## Disclaimer
