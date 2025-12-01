@@ -1,17 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createLiaraClient } from '../../api/client.js';
-
-// Mock the client creation
-vi.mock('../../api/client.js', () => ({
-    createLiaraClient: vi.fn(() => ({
-        get: vi.fn(),
-        post: vi.fn(),
-        delete: vi.fn(),
-        put: vi.fn(),
-        postFormData: vi.fn(),
-    })),
-}));
 
 describe('MCP Server Integration', () => {
     const originalEnv = process.env.LIARA_API_TOKEN;
@@ -45,3 +33,4 @@ describe('MCP Server Integration', () => {
         });
     });
 });
+

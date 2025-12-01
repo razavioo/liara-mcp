@@ -60,3 +60,4 @@ describe('Settings Service', () => {
         });
     });
 });
+

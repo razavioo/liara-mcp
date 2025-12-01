@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { LiaraClient } from '../../api/client.js';
-import axios, { AxiosError } from 'axios';
+import { AxiosError } from 'axios';
+import { validateAppName } from '../../utils/errors.js';
 
 describe('Error Handling Edge Cases', () => {
     describe('API Client Error Handling', () => {
@@ -82,3 +82,4 @@ describe('Error Handling Edge Cases', () => {
         });
     });
 });
+

@@ -31,19 +31,8 @@ describe('Databases Service', () => {
 
             const result = await dbService.listDatabases(mockClient);
 
-            expect(mockClient.get).toHaveBeenCalledWith('/v1/databases', {});
+            expect(mockClient.get).toHaveBeenCalledWith('/v1/databases');
             expect(result).toEqual(mockDatabases);
-        });
-
-        it('should support pagination', async () => {
-            (mockClient.get as any).mockResolvedValue([]);
-
-            await dbService.listDatabases(mockClient, { page: 2, perPage: 10 });
-
-            expect(mockClient.get).toHaveBeenCalledWith('/v1/databases', {
-                page: 2,
-                perPage: 10,
-            });
         });
     });
 
@@ -67,6 +56,27 @@ describe('Databases Service', () => {
 
             expect(mockClient.post).toHaveBeenCalledWith('/v1/databases', request);
             expect(result).toEqual(mockDb);
+        });
+    });
+
+    describe('listBackups', () => {
+        it('should list backups', async () => {
+            const mockBackups: DatabaseBackup[] = [
+                {
+                    _id: '1',
+                    databaseID: 'db1',
+                    name: 'backup1',
+                    size: 1024,
+                    createdAt: '2024-01-01',
+                    status: 'READY',
+                },
+            ];
+            (mockClient.get as any).mockResolvedValue(mockBackups);
+
+            const result = await dbService.listBackups(mockClient, 'my-db');
+
+            expect(mockClient.get).toHaveBeenCalledWith('/v1/databases/my-db/backups');
+            expect(result).toEqual(mockBackups);
         });
     });
 
@@ -105,33 +115,6 @@ describe('Databases Service', () => {
         });
     });
 
-    describe('listBackups', () => {
-        it('should list backups with pagination', async () => {
-            const mockBackups: DatabaseBackup[] = [
-                {
-                    _id: '1',
-                    databaseID: 'db1',
-                    name: 'backup1',
-                    size: 1024,
-                    createdAt: '2024-01-01',
-                    status: 'READY',
-                },
-            ];
-            (mockClient.get as any).mockResolvedValue(mockBackups);
-
-            const result = await dbService.listBackups(mockClient, 'my-db', {
-                page: 1,
-                perPage: 10,
-            });
-
-            expect(mockClient.get).toHaveBeenCalledWith('/v1/databases/my-db/backups', {
-                page: 1,
-                perPage: 10,
-            });
-            expect(result).toEqual(mockBackups);
-        });
-    });
-
     describe('getAvailableDatabaseTypes', () => {
         it('should return all database types', () => {
             const types = dbService.getAvailableDatabaseTypes();
@@ -143,3 +126,4 @@ describe('Databases Service', () => {
         });
     });
 });
+
