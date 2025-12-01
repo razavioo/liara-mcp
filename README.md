@@ -1,5 +1,7 @@
 # Liara MCP Server
 
+> **Note**: This is an **unofficial** MCP server for the Liara cloud platform. It is not affiliated with or endorsed by Liara.
+
 A Model Context Protocol (MCP) server for the Liara cloud platform. This server enables AI assistants to deploy and manage applications, databases, and infrastructure on Liara through natural language.
 
 ## Features
@@ -37,7 +39,7 @@ npm install liara-mcp
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/liara-mcp.git
+git clone https://github.com/razavioo/liara-mcp.git
 cd liara-mcp
 
 # Install dependencies
@@ -341,13 +343,22 @@ MIT
 - [Liara API Reference](https://openapi.liara.ir)
 - [Model Context Protocol](https://modelcontextprotocol.io)
 
+## Disclaimer
+
+This is an **unofficial** MCP server implementation for Liara. It is:
+- Not affiliated with, endorsed by, or supported by Liara
+- Maintained by the community
+- Provided as-is without warranty
+
+For official Liara support, please contact [Liara Support](https://liara.ir).
+
 ## Contributing
 
-Contributions are welcome! Please feel free to submit issues or pull requests.
+Contributions are welcome! Please feel free to submit issues or pull requests on [GitHub](https://github.com/razavioo/liara-mcp).
 
 ## Support
 
 For issues related to:
-- This MCP server: Open an issue on GitHub
-- Liara platform: Contact [Liara Support](https://liara.ir)
-- MCP protocol: See [MCP Documentation](https://modelcontextprotocol.io)
+- **This MCP server**: Open an issue on [GitHub](https://github.com/razavioo/liara-mcp/issues)
+- **Liara platform**: Contact [Liara Support](https://liara.ir)
+- **MCP protocol**: See [MCP Documentation](https://modelcontextprotocol.io)

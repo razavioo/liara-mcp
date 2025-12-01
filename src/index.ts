@@ -2279,7 +2279,7 @@ class LiaraMcpServer {
 
                     // Databases
                     case 'liara_list_databases': {
-                        const databases = await dbService.listDatabases(this.client, this.extractPagination(args));
+                        const databases = await dbService.listDatabases(this.client);
                         return {
                             content: [
                                 {
@@ -2396,8 +2396,7 @@ class LiaraMcpServer {
                     case 'liara_list_backups': {
                         const backups = await dbService.listBackups(
                             this.client,
-                            args!.databaseName as string,
-                            this.extractPagination(args)
+                            args!.databaseName as string
                         );
                         return {
                             content: [
