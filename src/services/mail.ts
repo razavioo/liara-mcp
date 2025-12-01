@@ -1,0 +1,104 @@
+import { LiaraClient } from '../api/client.js';
+import {
+    MailServer,
+    SendEmailRequest,
+} from '../api/types.js';
+import { validateRequired } from '../utils/errors.js';
+
+/**
+ * List all mail servers
+ */
+export async function listMailServers(client: LiaraClient): Promise<MailServer[]> {
+    return await client.get<MailServer[]>('/v1/mails');
+}
+
+/**
+ * Get details of a specific mail server
+ */
+export async function getMailServer(
+    client: LiaraClient,
+    mailId: string
+): Promise<MailServer> {
+    validateRequired(mailId, 'Mail server ID');
+    return await client.get<MailServer>(`/v1/mails/${mailId}`);
+}
+
+/**
+ * Create a new mail server
+ */
+export async function createMailServer(
+    client: LiaraClient,
+    name: string,
+    mode: 'smtp' | 'api' = 'api'
+): Promise<MailServer> {
+    validateRequired(name, 'Mail server name');
+    return await client.post<MailServer>('/v1/mails', { name, mode });
+}
+
+/**
+ * Delete a mail server
+ */
+export async function deleteMailServer(
+    client: LiaraClient,
+    mailId: string
+): Promise<void> {
+    validateRequired(mailId, 'Mail server ID');
+    await client.delete(`/v1/mails/${mailId}`);
+}
+
+/**
+ * Send an email
+ */
+export async function sendEmail(
+    client: LiaraClient,
+    mailId: string,
+    request: SendEmailRequest
+): Promise<{ message: string; messageId?: string }> {
+    validateRequired(mailId, 'Mail server ID');
+    validateRequired(request.from, 'From address');
+    validateRequired(request.to, 'To address');
+    validateRequired(request.subject, 'Subject');
+
+    if (!request.html && !request.text) {
+        throw new Error('Either html or text content is required');
+    }
+
+    return await client.post<{ message: string; messageId?: string }>(
+        `/v1/mails/${mailId}/send`,
+        request
+    );
+}
+
+/**
+ * Start a mail server
+ */
+export async function startMailServer(
+    client: LiaraClient,
+    mailId: string
+): Promise<void> {
+    validateRequired(mailId, 'Mail server ID');
+    await client.post(`/v1/mails/${mailId}/actions/start`);
+}
+
+/**
+ * Stop a mail server
+ */
+export async function stopMailServer(
+    client: LiaraClient,
+    mailId: string
+): Promise<void> {
+    validateRequired(mailId, 'Mail server ID');
+    await client.post(`/v1/mails/${mailId}/actions/stop`);
+}
+
+/**
+ * Restart a mail server
+ */
+export async function restartMailServer(
+    client: LiaraClient,
+    mailId: string
+): Promise<void> {
+    validateRequired(mailId, 'Mail server ID');
+    await client.post(`/v1/mails/${mailId}/actions/restart`);
+}
+
