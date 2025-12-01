@@ -22,9 +22,10 @@ describe('Concurrent Operations', () => {
                 .mockResolvedValueOnce(mockApps)
                 .mockResolvedValueOnce(mockDatabases);
 
+            const dbService = await import('../../services/databases.js');
             const [apps, databases] = await Promise.all([
                 appService.listApps(mockClient),
-                require('../../services/databases.js').listDatabases(mockClient),
+                dbService.listDatabases(mockClient),
             ]);
 
             expect(apps).toEqual(mockApps);
