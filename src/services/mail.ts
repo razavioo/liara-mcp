@@ -2,14 +2,20 @@ import { LiaraClient } from '../api/client.js';
 import {
     MailServer,
     SendEmailRequest,
+    PaginationOptions,
+    paginationToParams,
 } from '../api/types.js';
 import { validateRequired } from '../utils/errors.js';
 
 /**
  * List all mail servers
  */
-export async function listMailServers(client: LiaraClient): Promise<MailServer[]> {
-    return await client.get<MailServer[]>('/v1/mails');
+export async function listMailServers(
+    client: LiaraClient,
+    pagination?: PaginationOptions
+): Promise<MailServer[]> {
+    const params = paginationToParams(pagination);
+    return await client.get<MailServer[]>('/v1/mails', params);
 }
 
 /**

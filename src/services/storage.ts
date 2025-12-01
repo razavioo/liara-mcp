@@ -3,6 +3,8 @@ import {
     Bucket,
     BucketCredentials,
     CreateBucketRequest,
+    PaginationOptions,
+    paginationToParams,
 } from '../api/types.js';
 import { validateRequired } from '../utils/errors.js';
 import { createReadStream } from 'fs';
@@ -11,8 +13,12 @@ import FormData from 'form-data';
 /**
  * List all buckets
  */
-export async function listBuckets(client: LiaraClient): Promise<Bucket[]> {
-    return await client.get<Bucket[]>('/v1/buckets');
+export async function listBuckets(
+    client: LiaraClient,
+    pagination?: PaginationOptions
+): Promise<Bucket[]> {
+    const params = paginationToParams(pagination);
+    return await client.get<Bucket[]>('/v1/buckets', params);
 }
 
 /**

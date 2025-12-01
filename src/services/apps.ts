@@ -4,14 +4,20 @@ import {
     CreateProjectRequest,
     ProjectDetails,
     Platform,
+    PaginationOptions,
+    paginationToParams,
 } from '../api/types.js';
 import { validateAppName, validateRequired } from '../utils/errors.js';
 
 /**
  * List all apps/projects
  */
-export async function listApps(client: LiaraClient): Promise<Project[]> {
-    return await client.get<Project[]>('/v1/projects');
+export async function listApps(
+    client: LiaraClient,
+    pagination?: PaginationOptions
+): Promise<Project[]> {
+    const params = paginationToParams(pagination);
+    return await client.get<Project[]>('/v1/projects', params);
 }
 
 /**

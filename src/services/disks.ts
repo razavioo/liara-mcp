@@ -3,6 +3,8 @@ import {
     Disk,
     CreateDiskRequest,
     FtpAccess,
+    PaginationOptions,
+    paginationToParams,
 } from '../api/types.js';
 import { validateAppName, validateRequired } from '../utils/errors.js';
 
@@ -11,12 +13,24 @@ import { validateAppName, validateRequired } from '../utils/errors.js';
  */
 export async function listDisks(
     client: LiaraClient,
-    appName: string
+    appName: string,
+    pagination?: PaginationOptions
 ): Promise<Disk[]> {
     validateAppName(appName);
-    // Disks are included in project details
+    // Disks are included in project details, but we can still apply pagination client-side if needed
     const project = await client.get<any>(`/v1/projects/${appName}`);
-    return project.disks || [];
+    const disks = project.disks || [];
+    
+    // Apply client-side pagination if needed (since disks come from project details)
+    if (pagination) {
+        const page = pagination.page || 1;
+        const perPage = pagination.perPage || pagination.limit || 100;
+        const start = (page - 1) * perPage;
+        const end = start + perPage;
+        return disks.slice(start, end);
+    }
+    
+    return disks;
 }
 
 /**
@@ -91,13 +105,16 @@ export async function createFtpAccess(
 export async function listFtpAccesses(
     client: LiaraClient,
     appName: string,
-    diskName: string
+    diskName: string,
+    pagination?: PaginationOptions
 ): Promise<FtpAccess[]> {
     validateAppName(appName);
     validateRequired(diskName, 'Disk name');
+    const params = paginationToParams(pagination);
     
     return await client.get<FtpAccess[]>(
-        `/v1/projects/${appName}/disks/${diskName}/ftp`
+        `/v1/projects/${appName}/disks/${diskName}/ftp`,
+        params
     );
 }
 

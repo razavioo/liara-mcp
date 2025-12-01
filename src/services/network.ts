@@ -1,14 +1,20 @@
 import { LiaraClient } from '../api/client.js';
 import {
     Network,
+    PaginationOptions,
+    paginationToParams,
 } from '../api/types.js';
 import { validateRequired } from '../utils/errors.js';
 
 /**
  * List all networks
  */
-export async function listNetworks(client: LiaraClient): Promise<Network[]> {
-    return await client.get<Network[]>('/v1/networks');
+export async function listNetworks(
+    client: LiaraClient,
+    pagination?: PaginationOptions
+): Promise<Network[]> {
+    const params = paginationToParams(pagination);
+    return await client.get<Network[]>('/v1/networks', params);
 }
 
 /**

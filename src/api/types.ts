@@ -16,6 +16,39 @@ export interface PaginatedResponse<T> {
     perPage: number;
 }
 
+/**
+ * Pagination options for list operations
+ */
+export interface PaginationOptions {
+    page?: number;
+    perPage?: number;
+    limit?: number; // Alternative to perPage
+    offset?: number; // Alternative to page
+}
+
+/**
+ * Helper to convert pagination options to query parameters
+ */
+export function paginationToParams(options?: PaginationOptions): Record<string, any> {
+    if (!options) return {};
+    
+    const params: Record<string, any> = {};
+    
+    if (options.page !== undefined) {
+        params.page = options.page;
+    } else if (options.offset !== undefined) {
+        params.offset = options.offset;
+    }
+    
+    if (options.perPage !== undefined) {
+        params.perPage = options.perPage;
+    } else if (options.limit !== undefined) {
+        params.limit = options.limit;
+    }
+    
+    return params;
+}
+
 // App/Project types
 export interface Project {
     _id: string;

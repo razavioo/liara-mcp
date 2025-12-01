@@ -2,14 +2,20 @@ import { LiaraClient } from '../api/client.js';
 import {
     Domain,
     DomainCheck,
+    PaginationOptions,
+    paginationToParams,
 } from '../api/types.js';
 import { validateRequired } from '../utils/errors.js';
 
 /**
  * List all domains
  */
-export async function listDomains(client: LiaraClient): Promise<Domain[]> {
-    return await client.get<Domain[]>('/v1/domains');
+export async function listDomains(
+    client: LiaraClient,
+    pagination?: PaginationOptions
+): Promise<Domain[]> {
+    const params = paginationToParams(pagination);
+    return await client.get<Domain[]>('/v1/domains', params);
 }
 
 /**

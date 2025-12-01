@@ -4,14 +4,20 @@ import {
     CreateDatabaseRequest,
     DatabaseBackup,
     DatabaseType,
+    PaginationOptions,
+    paginationToParams,
 } from '../api/types.js';
 import { validateRequired } from '../utils/errors.js';
 
 /**
  * List all databases
  */
-export async function listDatabases(client: LiaraClient): Promise<Database[]> {
-    return await client.get<Database[]>('/v1/databases');
+export async function listDatabases(
+    client: LiaraClient,
+    pagination?: PaginationOptions
+): Promise<Database[]> {
+    const params = paginationToParams(pagination);
+    return await client.get<Database[]>('/v1/databases', params);
 }
 
 /**
@@ -101,10 +107,12 @@ export async function createBackup(
  */
 export async function listBackups(
     client: LiaraClient,
-    databaseName: string
+    databaseName: string,
+    pagination?: PaginationOptions
 ): Promise<DatabaseBackup[]> {
     validateRequired(databaseName, 'Database name');
-    return await client.get<DatabaseBackup[]>(`/v1/databases/${databaseName}/backups`);
+    const params = paginationToParams(pagination);
+    return await client.get<DatabaseBackup[]>(`/v1/databases/${databaseName}/backups`, params);
 }
 
 /**

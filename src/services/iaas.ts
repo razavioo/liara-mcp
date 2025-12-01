@@ -2,6 +2,8 @@ import { LiaraClient } from '../api/client.js';
 import {
     VirtualMachine,
     CreateVmRequest,
+    PaginationOptions,
+    paginationToParams,
 } from '../api/types.js';
 import { validateRequired } from '../utils/errors.js';
 
@@ -31,9 +33,13 @@ function createIaaSClient(client: LiaraClient): LiaraClient {
 /**
  * List all virtual machines
  */
-export async function listVMs(client: LiaraClient): Promise<VirtualMachine[]> {
+export async function listVMs(
+    client: LiaraClient,
+    pagination?: PaginationOptions
+): Promise<VirtualMachine[]> {
     const iaasClient = createIaaSClient(client);
-    return await iaasClient.get<VirtualMachine[]>('/vm');
+    const params = paginationToParams(pagination);
+    return await iaasClient.get<VirtualMachine[]>('/vm', params);
 }
 
 /**
@@ -171,12 +177,15 @@ export async function createSnapshot(
  */
 export async function listSnapshots(
     client: LiaraClient,
-    vmId: string
+    vmId: string,
+    pagination?: PaginationOptions
 ): Promise<Array<{ snapshotId: string; name: string; createdAt: string; size?: number }>> {
     validateRequired(vmId, 'VM ID');
     const iaasClient = createIaaSClient(client);
+    const params = paginationToParams(pagination);
     return await iaasClient.get<Array<{ snapshotId: string; name: string; createdAt: string; size?: number }>>(
-        `/vm/${vmId}/snapshots`
+        `/vm/${vmId}/snapshots`,
+        params
     );
 }
 

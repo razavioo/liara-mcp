@@ -10,6 +10,7 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { createLiaraClient } from './api/client.js';
 import { formatErrorForMcp } from './utils/errors.js';
+import { PaginationOptions } from './api/types.js';
 import * as appService from './services/apps.js';
 import * as envService from './services/environment.js';
 import * as deployService from './services/deployment.js';
@@ -70,6 +71,45 @@ class LiaraMcpServer {
         this.setupCallToolHandler();
     }
 
+    /**
+     * Get pagination properties for tool schemas
+     */
+    private getPaginationProperties() {
+        return {
+            page: {
+                type: 'number' as const,
+                description: 'Page number (1-based)',
+            },
+            perPage: {
+                type: 'number' as const,
+                description: 'Number of items per page',
+            },
+            limit: {
+                type: 'number' as const,
+                description: 'Alternative to perPage: maximum number of items to return',
+            },
+            offset: {
+                type: 'number' as const,
+                description: 'Alternative to page: number of items to skip',
+            },
+        };
+    }
+
+    /**
+     * Extract pagination options from tool arguments
+     */
+    private extractPagination(args: any): PaginationOptions | undefined {
+        if (args?.page || args?.perPage || args?.limit || args?.offset) {
+            return {
+                page: args.page as number | undefined,
+                perPage: args.perPage as number | undefined,
+                limit: args.limit as number | undefined,
+                offset: args.offset as number | undefined,
+            };
+        }
+        return undefined;
+    }
+
     private setupListToolsHandler() {
         this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
             tools: [
@@ -79,7 +119,7 @@ class LiaraMcpServer {
                     description: 'List all apps/projects in your Liara account',
                     inputSchema: {
                         type: 'object',
-                        properties: {},
+                        properties: this.getPaginationProperties(),
                     },
                 },
                 {
@@ -439,6 +479,7 @@ class LiaraMcpServer {
                                 type: 'string',
                                 description: 'The name of the app',
                             },
+                            ...this.getPaginationProperties(),
                         },
                         required: ['appName'],
                     },
@@ -489,6 +530,7 @@ class LiaraMcpServer {
                                 type: 'string',
                                 description: 'The name of the app',
                             },
+                            ...this.getPaginationProperties(),
                         },
                         required: ['appName'],
                     },
@@ -518,7 +560,7 @@ class LiaraMcpServer {
                     description: 'List all databases in your Liara account',
                     inputSchema: {
                         type: 'object',
-                        properties: {},
+                        properties: this.getPaginationProperties(),
                     },
                 },
                 {
@@ -660,6 +702,7 @@ class LiaraMcpServer {
                                 type: 'string',
                                 description: 'The name of the database',
                             },
+                            ...this.getPaginationProperties(),
                         },
                         required: ['databaseName'],
                     },
@@ -739,7 +782,7 @@ class LiaraMcpServer {
                     description: 'List all storage buckets',
                     inputSchema: {
                         type: 'object',
-                        properties: {},
+                        properties: this.getPaginationProperties(),
                     },
                 },
                 {
@@ -922,6 +965,7 @@ class LiaraMcpServer {
                                 description: 'Filter by plan type',
                                 enum: ['app', 'database', 'vm'],
                             },
+                            ...this.getPaginationProperties(),
                         },
                     },
                 },
@@ -946,7 +990,7 @@ class LiaraMcpServer {
                     description: 'List all DNS zones',
                     inputSchema: {
                         type: 'object',
-                        properties: {},
+                        properties: this.getPaginationProperties(),
                     },
                 },
                 {
@@ -1015,6 +1059,7 @@ class LiaraMcpServer {
                                 type: 'string',
                                 description: 'The zone ID',
                             },
+                            ...this.getPaginationProperties(),
                         },
                         required: ['zoneId'],
                     },
@@ -1136,7 +1181,7 @@ class LiaraMcpServer {
                     description: 'List all domains attached to apps',
                     inputSchema: {
                         type: 'object',
-                        properties: {},
+                        properties: this.getPaginationProperties(),
                     },
                 },
                 {
@@ -1206,7 +1251,7 @@ class LiaraMcpServer {
                     description: 'List all mail servers',
                     inputSchema: {
                         type: 'object',
-                        properties: {},
+                        properties: this.getPaginationProperties(),
                     },
                 },
                 {
@@ -1339,7 +1384,7 @@ class LiaraMcpServer {
                     description: 'List all virtual machines',
                     inputSchema: {
                         type: 'object',
-                        properties: {},
+                        properties: this.getPaginationProperties(),
                     },
                 },
                 {
@@ -1512,6 +1557,7 @@ class LiaraMcpServer {
                                 type: 'string',
                                 description: 'The VM ID',
                             },
+                            ...this.getPaginationProperties(),
                         },
                         required: ['vmId'],
                     },
@@ -1600,6 +1646,7 @@ class LiaraMcpServer {
                                 type: 'string',
                                 description: 'The name of the app',
                             },
+                            ...this.getPaginationProperties(),
                         },
                         required: ['appName'],
                     },
@@ -1720,6 +1767,7 @@ class LiaraMcpServer {
                                 type: 'string',
                                 description: 'The name of the disk',
                             },
+                            ...this.getPaginationProperties(),
                         },
                         required: ['appName', 'diskName'],
                     },
@@ -1753,7 +1801,7 @@ class LiaraMcpServer {
                     description: 'List all networks',
                     inputSchema: {
                         type: 'object',
-                        properties: {},
+                        properties: this.getPaginationProperties(),
                     },
                 },
                 {
@@ -1870,7 +1918,7 @@ class LiaraMcpServer {
                 switch (name) {
                     // App Management
                     case 'liara_list_apps': {
-                        const apps = await appService.listApps(this.client);
+                        const apps = await appService.listApps(this.client, this.extractPagination(args));
                         return {
                             content: [
                                 {
@@ -2150,7 +2198,11 @@ class LiaraMcpServer {
                     }
 
                     case 'liara_list_releases': {
-                        const releases = await deployService.listReleases(this.client, args!.appName as string);
+                        const releases = await deployService.listReleases(
+                            this.client,
+                            args!.appName as string,
+                            this.extractPagination(args)
+                        );
                         return {
                             content: [
                                 {
@@ -2196,7 +2248,8 @@ class LiaraMcpServer {
                     case 'liara_list_sources': {
                         const sources = await deployService.listSources(
                             this.client,
-                            args!.appName as string
+                            args!.appName as string,
+                            this.extractPagination(args)
                         );
                         return {
                             content: [
@@ -2226,7 +2279,7 @@ class LiaraMcpServer {
 
                     // Databases
                     case 'liara_list_databases': {
-                        const databases = await dbService.listDatabases(this.client);
+                        const databases = await dbService.listDatabases(this.client, this.extractPagination(args));
                         return {
                             content: [
                                 {
@@ -2341,7 +2394,11 @@ class LiaraMcpServer {
                     }
 
                     case 'liara_list_backups': {
-                        const backups = await dbService.listBackups(this.client, args!.databaseName as string);
+                        const backups = await dbService.listBackups(
+                            this.client,
+                            args!.databaseName as string,
+                            this.extractPagination(args)
+                        );
                         return {
                             content: [
                                 {
@@ -2414,7 +2471,7 @@ class LiaraMcpServer {
 
                     // Storage
                     case 'liara_list_buckets': {
-                        const buckets = await storageService.listBuckets(this.client);
+                        const buckets = await storageService.listBuckets(this.client, this.extractPagination(args));
                         return {
                             content: [
                                 {
@@ -2560,7 +2617,8 @@ class LiaraMcpServer {
                     case 'liara_list_plans': {
                         const plans = await planService.listPlans(
                             this.client,
-                            args?.planType as 'app' | 'database' | 'vm' | undefined
+                            args?.planType as 'app' | 'database' | 'vm' | undefined,
+                            this.extractPagination(args)
                         );
                         return {
                             content: [
@@ -2586,7 +2644,7 @@ class LiaraMcpServer {
 
                     // DNS
                     case 'liara_list_zones': {
-                        const zones = await dnsService.listZones(this.client);
+                        const zones = await dnsService.listZones(this.client, this.extractPagination(args));
                         return {
                             content: [
                                 {
@@ -2646,7 +2704,11 @@ class LiaraMcpServer {
                     }
 
                     case 'liara_list_dns_records': {
-                        const records = await dnsService.listRecords(this.client, args!.zoneId as string);
+                        const records = await dnsService.listRecords(
+                            this.client,
+                            args!.zoneId as string,
+                            this.extractPagination(args)
+                        );
                         return {
                             content: [
                                 {
@@ -2736,7 +2798,7 @@ class LiaraMcpServer {
 
                     // Domains (App Domains)
                     case 'liara_list_domains': {
-                        const domains = await domainService.listDomains(this.client);
+                        const domains = await domainService.listDomains(this.client, this.extractPagination(args));
                         return {
                             content: [
                                 {
@@ -2801,7 +2863,7 @@ class LiaraMcpServer {
 
                     // Mail
                     case 'liara_list_mail_servers': {
-                        const servers = await mailService.listMailServers(this.client);
+                        const servers = await mailService.listMailServers(this.client, this.extractPagination(args));
                         return {
                             content: [
                                 {
@@ -2913,7 +2975,7 @@ class LiaraMcpServer {
 
                     // VMs
                     case 'liara_list_vms': {
-                        const vms = await iaasService.listVMs(this.client);
+                        const vms = await iaasService.listVMs(this.client, this.extractPagination(args));
                         return {
                             content: [
                                 {
@@ -3055,7 +3117,8 @@ class LiaraMcpServer {
                     case 'liara_list_snapshots': {
                         const snapshots = await iaasService.listSnapshots(
                             this.client,
-                            args!.vmId as string
+                            args!.vmId as string,
+                            this.extractPagination(args)
                         );
                         return {
                             content: [
@@ -3133,7 +3196,11 @@ class LiaraMcpServer {
 
                     // Disks
                     case 'liara_list_disks': {
-                        const disks = await diskService.listDisks(this.client, args!.appName as string);
+                        const disks = await diskService.listDisks(
+                            this.client,
+                            args!.appName as string,
+                            this.extractPagination(args)
+                        );
                         return {
                             content: [
                                 {
@@ -3233,7 +3300,8 @@ class LiaraMcpServer {
                         const ftpAccesses = await diskService.listFtpAccesses(
                             this.client,
                             args!.appName as string,
-                            args!.diskName as string
+                            args!.diskName as string,
+                            this.extractPagination(args)
                         );
                         return {
                             content: [
@@ -3264,7 +3332,7 @@ class LiaraMcpServer {
 
                     // Networks
                     case 'liara_list_networks': {
-                        const networks = await networkService.listNetworks(this.client);
+                        const networks = await networkService.listNetworks(this.client, this.extractPagination(args));
                         return {
                             content: [
                                 {

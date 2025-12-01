@@ -4,14 +4,20 @@ import {
     DnsRecord,
     CreateDnsRecordRequest,
     DomainCheck,
+    PaginationOptions,
+    paginationToParams,
 } from '../api/types.js';
 import { validateRequired } from '../utils/errors.js';
 
 /**
  * List all DNS zones
  */
-export async function listZones(client: LiaraClient): Promise<Zone[]> {
-    return await client.get<Zone[]>('/v1/zones');
+export async function listZones(
+    client: LiaraClient,
+    pagination?: PaginationOptions
+): Promise<Zone[]> {
+    const params = paginationToParams(pagination);
+    return await client.get<Zone[]>('/v1/zones', params);
 }
 
 /**
@@ -63,10 +69,12 @@ export async function checkZone(
  */
 export async function listRecords(
     client: LiaraClient,
-    zoneId: string
+    zoneId: string,
+    pagination?: PaginationOptions
 ): Promise<DnsRecord[]> {
     validateRequired(zoneId, 'Zone ID');
-    return await client.get<DnsRecord[]>(`/v1/zones/${zoneId}/records`);
+    const params = paginationToParams(pagination);
+    return await client.get<DnsRecord[]>(`/v1/zones/${zoneId}/records`, params);
 }
 
 /**

@@ -1,5 +1,5 @@
 import { LiaraClient } from '../api/client.js';
-import { DeployReleaseResponse, DeployReleaseRequest, DeploySourceResponse } from '../api/types.js';
+import { DeployReleaseResponse, DeployReleaseRequest, DeploySourceResponse, PaginationOptions, paginationToParams } from '../api/types.js';
 import { validateAppName, validateRequired } from '../utils/errors.js';
 import { createReadStream } from 'fs';
 import FormData from 'form-data';
@@ -53,7 +53,8 @@ export async function deployRelease(
  */
 export async function listReleases(
     client: LiaraClient,
-    appName: string
+    appName: string,
+    pagination?: PaginationOptions
 ): Promise<Array<{
     _id: string;
     releaseID: string;
@@ -62,13 +63,14 @@ export async function listReleases(
     createdAt: string;
 }>> {
     validateAppName(appName);
+    const params = paginationToParams(pagination);
     return await client.get<Array<{
         _id: string;
         releaseID: string;
         sourceID: string;
         status: string;
         createdAt: string;
-    }>>(`/v2/projects/${appName}/releases`);
+    }>>(`/v2/projects/${appName}/releases`, params);
 }
 
 /**
@@ -118,7 +120,8 @@ export async function rollbackRelease(
  */
 export async function listSources(
     client: LiaraClient,
-    appName: string
+    appName: string,
+    pagination?: PaginationOptions
 ): Promise<Array<{
     _id: string;
     sourceID: string;
@@ -127,13 +130,14 @@ export async function listSources(
     size?: number;
 }>> {
     validateAppName(appName);
+    const params = paginationToParams(pagination);
     return await client.get<Array<{
         _id: string;
         sourceID: string;
         status: string;
         createdAt: string;
         size?: number;
-    }>>(`/v2/projects/${appName}/sources`);
+    }>>(`/v2/projects/${appName}/sources`, params);
 }
 
 /**

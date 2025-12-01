@@ -1,5 +1,5 @@
 import { LiaraClient } from '../api/client.js';
-import { Plan } from '../api/types.js';
+import { Plan, PaginationOptions, paginationToParams } from '../api/types.js';
 
 /**
  * List available plans
@@ -7,9 +7,11 @@ import { Plan } from '../api/types.js';
  */
 export async function listPlans(
     client: LiaraClient,
-    planType?: 'app' | 'database' | 'vm'
+    planType?: 'app' | 'database' | 'vm',
+    pagination?: PaginationOptions
 ): Promise<Plan[]> {
-    const params = planType ? { type: planType } : {};
+    const params: any = planType ? { type: planType } : {};
+    Object.assign(params, paginationToParams(pagination));
     return await client.get<Plan[]>('/v1/plans', params);
 }
 

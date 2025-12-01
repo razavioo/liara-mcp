@@ -1,0 +1,36 @@
+# Source files (only dist/ should be published)
+src/
+tsconfig.json
+
+# Development files
+.env
+.env.example
+.git/
+.gitignore
+
+# Build artifacts (dist/ is included via files field)
+*.log
+.DS_Store
+
+# Documentation (README.md and LICENSE are included via files field)
+LIARA_RESEARCH.md
+PUBLISHING.md
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Test files
+test/
+tests/
+__tests__/
+*.test.ts
+*.spec.ts
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
