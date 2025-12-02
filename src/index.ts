@@ -42,7 +42,7 @@ class LiaraMcpServer {
         this.server = new Server(
             {
                 name: 'liara-mcp',
-                version: '0.1.3',
+                version: '0.1.4',
             },
             {
                 capabilities: {
@@ -538,24 +538,7 @@ class LiaraMcpServer {
                         required: ['appName'],
                     },
                 },
-                {
-                    name: 'liara_delete_source',
-                    description: 'Delete an uploaded source',
-                    inputSchema: {
-                        type: 'object',
-                        properties: {
-                            appName: {
-                                type: 'string',
-                                description: 'The name of the app',
-                            },
-                            sourceID: {
-                                type: 'string',
-                                description: 'The source ID to delete',
-                            },
-                        },
-                        required: ['appName', 'sourceID'],
-                    },
-                },
+
 
                 // Database Tools
                 {
@@ -937,24 +920,7 @@ class LiaraMcpServer {
                         required: ['bucketName', 'objectKey'],
                     },
                 },
-                {
-                    name: 'liara_get_object_metadata',
-                    description: 'Get metadata for an object',
-                    inputSchema: {
-                        type: 'object',
-                        properties: {
-                            bucketName: {
-                                type: 'string',
-                                description: 'The name of the bucket',
-                            },
-                            objectKey: {
-                                type: 'string',
-                                description: 'The object key',
-                            },
-                        },
-                        required: ['bucketName', 'objectKey'],
-                    },
-                },
+
 
                 // Plan Tools
                 {
@@ -1038,20 +1004,7 @@ class LiaraMcpServer {
                         required: ['zoneId'],
                     },
                 },
-                {
-                    name: 'liara_check_zone',
-                    description: 'Check DNS zone status',
-                    inputSchema: {
-                        type: 'object',
-                        properties: {
-                            zoneId: {
-                                type: 'string',
-                                description: 'The zone ID',
-                            },
-                        },
-                        required: ['zoneId'],
-                    },
-                },
+
                 {
                     name: 'liara_list_dns_records',
                     description: 'List DNS records for a zone',
@@ -1233,20 +1186,7 @@ class LiaraMcpServer {
                         required: ['domainId'],
                     },
                 },
-                {
-                    name: 'liara_check_domain',
-                    description: 'Check domain status and DNS configuration',
-                    inputSchema: {
-                        type: 'object',
-                        properties: {
-                            domainId: {
-                                type: 'string',
-                                description: 'The domain ID',
-                            },
-                        },
-                        required: ['domainId'],
-                    },
-                },
+
 
                 // Mail Tools
                 {
@@ -1486,20 +1426,7 @@ class LiaraMcpServer {
                         required: ['vmId'],
                     },
                 },
-                {
-                    name: 'liara_poweroff_vm',
-                    description: 'Power off a virtual machine immediately',
-                    inputSchema: {
-                        type: 'object',
-                        properties: {
-                            vmId: {
-                                type: 'string',
-                                description: 'The VM ID',
-                            },
-                        },
-                        required: ['vmId'],
-                    },
-                },
+
                 {
                     name: 'liara_delete_vm',
                     description: 'Delete a virtual machine',
@@ -2264,21 +2191,7 @@ class LiaraMcpServer {
                         };
                     }
 
-                    case 'liara_delete_source': {
-                        await deployService.deleteSource(
-                            this.client,
-                            args!.appName as string,
-                            args!.sourceID as string
-                        );
-                        return {
-                            content: [
-                                {
-                                    type: 'text',
-                                    text: `Source "${args!.sourceID}" deleted successfully.`,
-                                },
-                            ],
-                        };
-                    }
+
 
                     // Databases
                     case 'liara_list_databases': {
@@ -2599,21 +2512,7 @@ class LiaraMcpServer {
                         };
                     }
 
-                    case 'liara_get_object_metadata': {
-                        const metadata = await storageService.getObjectMetadata(
-                            this.client,
-                            args!.bucketName as string,
-                            args!.objectKey as string
-                        );
-                        return {
-                            content: [
-                                {
-                                    type: 'text',
-                                    text: JSON.stringify(metadata, null, 2),
-                                },
-                            ],
-                        };
-                    }
+
 
                     // Plans
                     case 'liara_list_plans': {
@@ -2693,17 +2592,7 @@ class LiaraMcpServer {
                         };
                     }
 
-                    case 'liara_check_zone': {
-                        const check = await dnsService.checkZone(this.client, args!.zoneId as string);
-                        return {
-                            content: [
-                                {
-                                    type: 'text',
-                                    text: JSON.stringify(check, null, 2),
-                                },
-                            ],
-                        };
-                    }
+
 
                     case 'liara_list_dns_records': {
                         const records = await dnsService.listRecords(
@@ -2851,17 +2740,7 @@ class LiaraMcpServer {
                         };
                     }
 
-                    case 'liara_check_domain': {
-                        const check = await domainService.checkDomain(this.client, args!.domainId as string);
-                        return {
-                            content: [
-                                {
-                                    type: 'text',
-                                    text: JSON.stringify(check, null, 2),
-                                },
-                            ],
-                        };
-                    }
+
 
                     // Mail
                     case 'liara_list_mail_servers': {
@@ -3060,17 +2939,7 @@ class LiaraMcpServer {
                         };
                     }
 
-                    case 'liara_poweroff_vm': {
-                        await iaasService.powerOffVM(this.client, args!.vmId as string);
-                        return {
-                            content: [
-                                {
-                                    type: 'text',
-                                    text: `VM "${args!.vmId}" powered off successfully.`,
-                                },
-                            ],
-                        };
-                    }
+
 
                     case 'liara_delete_vm': {
                         await iaasService.deleteVM(this.client, args!.vmId as string);

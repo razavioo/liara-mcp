@@ -99,6 +99,65 @@ Add the following to your MCP configuration file:
 }
 ```
 
+**Alternative Configuration (For nvm/fnm users):**
+
+If you're using **nvm** or **fnm** to manage Node.js versions, use this configuration instead to avoid PATH issues:
+
+```json
+{
+  "mcpServers": {
+    "liara": {
+      "command": "/bin/zsh",
+      "args": [
+        "-c",
+        "source ~/.nvm/nvm.sh && npx -y liara-mcp"
+      ],
+      "env": {
+        "LIARA_API_TOKEN": "your_api_token_here"
+      }
+    }
+  }
+}
+```
+
+**For bash users**, replace `/bin/zsh` with `/bin/bash` and `~/.nvm/nvm.sh` with your nvm init script path.
+
+**For fnm users**:
+```json
+{
+  "mcpServers": {
+    "liara": {
+      "command": "/bin/zsh",
+      "args": [
+        "-c",
+        "eval \"$(fnm env --use-on-cd --shell zsh)\" && npx -y liara-mcp"
+      ],
+      "env": {
+        "LIARA_API_TOKEN": "your_api_token_here"
+      }
+    }
+  }
+}
+```
+
+### Why Use the Alternative Configuration?
+
+Many IDE and editor applications (like Claude Desktop, Cursor, Windsurf, etc.) start MCP servers in a **restricted environment** without your shell's PATH configuration. This causes the error:
+
+```
+Error: failed to create mcp stdio client: exec: "npx": executable file not found in $PATH
+```
+
+**The problem:** When you use nvm/fnm, Node.js and npx are installed in version-specific directories that are added to PATH by your shell initialization scripts (`~/.zshrc`, `~/.bashrc`, etc.). However, MCP clients don't load these files, so they can't find npx.
+
+**The solution:** Using a shell wrapper (`/bin/zsh -c` or `/bin/bash -c`) explicitly sources the nvm/fnm initialization script before running npx. This ensures the Node.js environment is properly configured.
+
+**When to use each:**
+- **Basic config**: If you installed Node.js via system package manager (`brew`, `apt`, etc.) or official installer
+- **Alternative config**: If you use nvm, nodenv, fnm, or similar version managers
+
+
+
 ### Troubleshooting: PATH Issues (nvm/nodenv users)
 
 If you see `spawn npx ENOENT` error, run the setup wizard:
@@ -135,7 +194,7 @@ This will generate the correct configuration with absolute paths for your system
 - `liara_get_release` - Get release details
 - `liara_rollback_release` - Rollback to a previous release
 - `liara_list_sources` - List uploaded sources
-- `liara_delete_source` - Delete an uploaded source
+
 
 #### Database Management
 - `liara_list_databases` - List all databases
@@ -163,7 +222,7 @@ This will generate the correct configuration with absolute paths for your system
 - `liara_upload_object` - Upload an object to a bucket
 - `liara_get_object_download_url` - Get download URL for an object
 - `liara_delete_object` - Delete an object from a bucket
-- `liara_get_object_metadata` - Get metadata for an object
+
 
 #### App Settings
 - `liara_set_zero_downtime` - Enable/disable zero-downtime deployment
@@ -186,7 +245,7 @@ This will generate the correct configuration with absolute paths for your system
 - `liara_get_zone` - Get zone details
 - `liara_create_zone` - Create a DNS zone
 - `liara_delete_zone` - Delete a DNS zone
-- `liara_check_zone` - Check zone status
+
 - `liara_list_dns_records` - List DNS records
 - `liara_create_dns_record` - Create a DNS record
 - `liara_get_dns_record` - Get DNS record details
@@ -198,7 +257,7 @@ This will generate the correct configuration with absolute paths for your system
 - `liara_get_domain` - Get domain details
 - `liara_add_domain` - Add a domain to an app
 - `liara_remove_domain` - Remove a domain from an app
-- `liara_check_domain` - Check domain status
+
 
 #### Mail Server
 - `liara_list_mail_servers` - List all mail servers
@@ -218,7 +277,7 @@ This will generate the correct configuration with absolute paths for your system
 - `liara_stop_vm` - Stop a VM
 - `liara_restart_vm` - Restart a VM
 - `liara_shutdown_vm` - Shutdown a VM
-- `liara_poweroff_vm` - Power off a VM
+
 - `liara_delete_vm` - Delete a VM
 - `liara_resize_vm` - Resize a VM
 - `liara_create_snapshot` - Create a VM snapshot
@@ -340,7 +399,7 @@ MIT
 
 This MCP server implements comprehensive coverage of the [Liara API](https://openapi.liara.ir), including:
 
-### Implemented Services (15 modules, 70+ tools)
+### Implemented Services (15 modules, 99 tools)
 
 - **Apps** - Full lifecycle management (create, deploy, start, stop, restart, resize)
 - **Databases** - Complete database management with backup/restore (8 database types)
