@@ -8,6 +8,8 @@ export interface LiaraClientConfig {
     apiToken: string;
     teamId?: string;
     baseURL?: string;
+    maxRetries?: number;
+    retryDelay?: number;
 }
 
 /**
@@ -16,6 +18,8 @@ export interface LiaraClientConfig {
 export class LiaraClient {
     private client: AxiosInstance;
     private teamId?: string;
+    private maxRetries: number;
+    private retryDelay: number;
 
     constructor(config: LiaraClientConfig) {
         const baseURL = config.baseURL || process.env.LIARA_API_BASE_URL || 'https://api.iran.liara.ir';
@@ -30,6 +34,8 @@ export class LiaraClient {
         });
 
         this.teamId = config.teamId;
+        this.maxRetries = config.maxRetries ?? 3;
+        this.retryDelay = config.retryDelay ?? 1000;
 
         // Add response interceptor for error handling
         this.client.interceptors.response.use(
@@ -38,6 +44,38 @@ export class LiaraClient {
                 return Promise.reject(this.handleError(error));
             }
         );
+    }
+
+    /**
+     * Sleep for a given number of milliseconds
+     */
+    private sleep(ms: number): Promise<void> {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    /**
+     * Execute request with retry logic for rate limiting
+     */
+    private async executeWithRetry<T>(
+        requestFn: () => Promise<T>,
+        retryCount = 0
+    ): Promise<T> {
+        try {
+            return await requestFn();
+        } catch (error: any) {
+            // Retry on rate limiting (429) or server errors (5xx)
+            const statusCode = error.statusCode || error.response?.status;
+            const isRetryable = statusCode === 429 || (statusCode >= 500 && statusCode < 600);
+            
+            if (isRetryable && retryCount < this.maxRetries) {
+                // Exponential backoff: 1s, 2s, 4s...
+                const delay = this.retryDelay * Math.pow(2, retryCount);
+                await this.sleep(delay);
+                return this.executeWithRetry(requestFn, retryCount + 1);
+            }
+            
+            throw error;
+        }
     }
 
     /**
@@ -95,64 +133,74 @@ export class LiaraClient {
     }
 
     /**
-     * GET request
+     * GET request with automatic retry for rate limiting
      */
     async get<T>(url: string, params?: any): Promise<T> {
-        const response = await this.client.get<T>(url, {
-            params: this.addTeamId(params)
+        return this.executeWithRetry(async () => {
+            const response = await this.client.get<T>(url, {
+                params: this.addTeamId(params)
+            });
+            return response.data;
         });
-        return response.data;
     }
 
     /**
-     * POST request
+     * POST request with automatic retry for rate limiting
      */
     async post<T>(url: string, data?: any, params?: any): Promise<T> {
-        const response = await this.client.post<T>(url, data, {
-            params: this.addTeamId(params)
+        return this.executeWithRetry(async () => {
+            const response = await this.client.post<T>(url, data, {
+                params: this.addTeamId(params)
+            });
+            return response.data;
         });
-        return response.data;
     }
 
     /**
-     * PUT request
+     * PUT request with automatic retry for rate limiting
      */
     async put<T>(url: string, data?: any, params?: any): Promise<T> {
-        const response = await this.client.put<T>(url, data, {
-            params: this.addTeamId(params)
+        return this.executeWithRetry(async () => {
+            const response = await this.client.put<T>(url, data, {
+                params: this.addTeamId(params)
+            });
+            return response.data;
         });
-        return response.data;
     }
 
     /**
-     * DELETE request
+     * DELETE request with automatic retry for rate limiting
      */
     async delete<T>(url: string, params?: any): Promise<T> {
-        const response = await this.client.delete<T>(url, {
-            params: this.addTeamId(params)
+        return this.executeWithRetry(async () => {
+            const response = await this.client.delete<T>(url, {
+                params: this.addTeamId(params)
+            });
+            return response.data;
         });
-        return response.data;
     }
 
     /**
-     * POST multipart/form-data request
+     * POST multipart/form-data request with automatic retry for rate limiting
      */
     async postFormData<T>(url: string, formData: any, params?: any): Promise<T> {
-        // form-data sets its own Content-Type with boundary, so we use its headers
-        const headers = formData.getHeaders ? formData.getHeaders() : {
-            'Content-Type': 'multipart/form-data',
-        };
-        
-        const response = await this.client.post<T>(url, formData, {
-            params: this.addTeamId(params),
-            headers: {
-                ...headers,
-                'Authorization': this.client.defaults.headers['Authorization'],
-            },
-            maxContentLength: Infinity,
-            maxBodyLength: Infinity,
+        return this.executeWithRetry(async () => {
+            // form-data sets its own Content-Type with boundary, so we use its headers
+            const headers = formData.getHeaders ? formData.getHeaders() : {
+                'Content-Type': 'multipart/form-data',
+            };
+            
+            const response = await this.client.post<T>(url, formData, {
+                params: this.addTeamId(params),
+                headers: {
+                    ...headers,
+                    'Authorization': this.client.defaults.headers['Authorization'],
+                },
+                maxContentLength: Infinity,
+                maxBodyLength: Infinity,
+            });
+            return response.data;
         });
-        return response.data;
     }
 }
 

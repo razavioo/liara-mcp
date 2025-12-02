@@ -7,7 +7,7 @@ import {
     PaginationOptions,
     paginationToParams,
 } from '../api/types.js';
-import { validateRequired } from '../utils/errors.js';
+import { validateRequired, unwrapApiResponse } from '../utils/errors.js';
 
 /**
  * List all DNS zones
@@ -17,7 +17,8 @@ export async function listZones(
     pagination?: PaginationOptions
 ): Promise<Zone[]> {
     const params = paginationToParams(pagination);
-    return await client.get<Zone[]>('/v1/zones', params);
+    const response = await client.get<any>('/v1/zones', params);
+    return unwrapApiResponse<Zone[]>(response, ['zones', 'data', 'items']);
 }
 
 /**
@@ -74,7 +75,8 @@ export async function listRecords(
 ): Promise<DnsRecord[]> {
     validateRequired(zoneId, 'Zone ID');
     const params = paginationToParams(pagination);
-    return await client.get<DnsRecord[]>(`/v1/zones/${zoneId}/records`, params);
+    const response = await client.get<any>(`/v1/zones/${zoneId}/records`, params);
+    return unwrapApiResponse<DnsRecord[]>(response, ['records', 'data', 'items']);
 }
 
 /**

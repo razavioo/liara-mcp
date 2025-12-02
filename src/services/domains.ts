@@ -5,7 +5,7 @@ import {
     PaginationOptions,
     paginationToParams,
 } from '../api/types.js';
-import { validateRequired } from '../utils/errors.js';
+import { validateRequired, unwrapApiResponse } from '../utils/errors.js';
 
 /**
  * List all domains
@@ -15,7 +15,8 @@ export async function listDomains(
     pagination?: PaginationOptions
 ): Promise<Domain[]> {
     const params = paginationToParams(pagination);
-    return await client.get<Domain[]>('/v1/domains', params);
+    const response = await client.get<any>('/v1/domains', params);
+    return unwrapApiResponse<Domain[]>(response, ['domains', 'data', 'items']);
 }
 
 /**

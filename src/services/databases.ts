@@ -5,13 +5,14 @@ import {
     DatabaseBackup,
     DatabaseType,
 } from '../api/types.js';
-import { validateRequired } from '../utils/errors.js';
+import { validateRequired, unwrapApiResponse } from '../utils/errors.js';
 
 /**
  * List all databases
  */
 export async function listDatabases(client: LiaraClient): Promise<Database[]> {
-    return await client.get<Database[]>('/v1/databases');
+    const response = await client.get<any>('/v1/databases');
+    return unwrapApiResponse<Database[]>(response, ['databases', 'data', 'items']);
 }
 
 /**
@@ -104,7 +105,8 @@ export async function listBackups(
     databaseName: string
 ): Promise<DatabaseBackup[]> {
     validateRequired(databaseName, 'Database name');
-    return await client.get<DatabaseBackup[]>(`/v1/databases/${databaseName}/backups`);
+    const response = await client.get<any>(`/v1/databases/${databaseName}/backups`);
+    return unwrapApiResponse<DatabaseBackup[]>(response, ['backups', 'data', 'items']);
 }
 
 /**
@@ -123,28 +125,86 @@ export async function getBackupDownloadUrl(
 }
 
 /**
- * Get database connection information (host, port, credentials)
+ * Database connection info returned by the API
  */
-export async function getDatabaseConnection(
-    client: LiaraClient,
-    databaseName: string
-): Promise<{
+export interface DatabaseConnectionInfo {
     host: string;
     port: number;
     username: string;
     password: string;
     database: string;
     connectionString?: string;
-}> {
+}
+
+/**
+ * Get database connection information (host, port, credentials)
+ * The Liara API includes connection info directly in the database details response
+ */
+export async function getDatabaseConnection(
+    client: LiaraClient,
+    databaseName: string
+): Promise<DatabaseConnectionInfo> {
     validateRequired(databaseName, 'Database name');
-    return await client.get<{
-        host: string;
-        port: number;
-        username: string;
-        password: string;
-        database: string;
-        connectionString?: string;
-    }>(`/v1/databases/${databaseName}/connection`);
+    
+    // Fetch database details which includes connection info
+    const dbDetails = await client.get<any>(`/v1/databases/${databaseName}`);
+    
+    // Extract connection info from the database details
+    // The API structure may include these in different fields based on database type
+    const connectionInfo: DatabaseConnectionInfo = {
+        host: dbDetails.hostname || dbDetails.host || dbDetails.internalHostname || '',
+        port: dbDetails.port || getDefaultPort(dbDetails.type),
+        username: dbDetails.username || dbDetails.user || 'root',
+        password: dbDetails.password || dbDetails.rootPassword || '',
+        database: dbDetails.database || dbDetails.name || databaseName,
+        connectionString: buildConnectionString(dbDetails),
+    };
+    
+    return connectionInfo;
+}
+
+/**
+ * Get default port for database type
+ */
+function getDefaultPort(dbType: string): number {
+    const ports: Record<string, number> = {
+        postgres: 5432,
+        mysql: 3306,
+        mariadb: 3306,
+        mongodb: 27017,
+        redis: 6379,
+        elasticsearch: 9200,
+        mssql: 1433,
+        rabbitmq: 5672,
+    };
+    return ports[dbType] || 0;
+}
+
+/**
+ * Build connection string based on database type
+ */
+function buildConnectionString(db: any): string | undefined {
+    if (!db.hostname && !db.host) return undefined;
+    
+    const host = db.hostname || db.host || db.internalHostname;
+    const port = db.port || getDefaultPort(db.type);
+    const user = db.username || db.user || 'root';
+    const pass = db.password || db.rootPassword || '';
+    const dbName = db.database || db.name;
+    
+    switch (db.type) {
+        case 'postgres':
+            return `postgresql://${user}:${pass}@${host}:${port}/${dbName}`;
+        case 'mysql':
+        case 'mariadb':
+            return `mysql://${user}:${pass}@${host}:${port}/${dbName}`;
+        case 'mongodb':
+            return `mongodb://${user}:${pass}@${host}:${port}/${dbName}`;
+        case 'redis':
+            return pass ? `redis://:${pass}@${host}:${port}` : `redis://${host}:${port}`;
+        default:
+            return undefined;
+    }
 }
 
 /**

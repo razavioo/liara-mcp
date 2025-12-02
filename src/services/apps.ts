@@ -7,7 +7,7 @@ import {
     PaginationOptions,
     paginationToParams,
 } from '../api/types.js';
-import { validateAppName, validateRequired } from '../utils/errors.js';
+import { validateAppName, validateRequired, unwrapApiResponse } from '../utils/errors.js';
 
 /**
  * List all apps/projects
@@ -17,7 +17,8 @@ export async function listApps(
     pagination?: PaginationOptions
 ): Promise<Project[]> {
     const params = paginationToParams(pagination);
-    return await client.get<Project[]>('/v1/projects', params);
+    const response = await client.get<any>('/v1/projects', params);
+    return unwrapApiResponse<Project[]>(response, ['projects', 'data', 'items']);
 }
 
 /**

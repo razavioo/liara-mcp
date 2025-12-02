@@ -6,7 +6,7 @@ import {
     PaginationOptions,
     paginationToParams,
 } from '../api/types.js';
-import { validateRequired } from '../utils/errors.js';
+import { validateRequired, unwrapApiResponse } from '../utils/errors.js';
 import { createReadStream } from 'fs';
 import FormData from 'form-data';
 
@@ -18,7 +18,8 @@ export async function listBuckets(
     pagination?: PaginationOptions
 ): Promise<Bucket[]> {
     const params = paginationToParams(pagination);
-    return await client.get<Bucket[]>('/v1/buckets', params);
+    const response = await client.get<any>('/v1/buckets', params);
+    return unwrapApiResponse<Bucket[]>(response, ['buckets', 'data', 'items']);
 }
 
 /**

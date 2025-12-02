@@ -1,5 +1,6 @@
 import { LiaraClient } from '../api/client.js';
 import { Plan, PaginationOptions, paginationToParams } from '../api/types.js';
+import { unwrapApiResponse } from '../utils/errors.js';
 
 /**
  * List available plans
@@ -12,7 +13,8 @@ export async function listPlans(
 ): Promise<Plan[]> {
     const params: any = planType ? { type: planType } : {};
     Object.assign(params, paginationToParams(pagination));
-    return await client.get<Plan[]>('/v1/plans', params);
+    const response = await client.get<any>('/v1/plans', params);
+    return unwrapApiResponse<Plan[]>(response, ['plans', 'data', 'items']);
 }
 
 /**

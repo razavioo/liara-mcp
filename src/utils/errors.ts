@@ -73,3 +73,40 @@ export function validateEnvKey(key: string): void {
         );
     }
 }
+
+/**
+ * Unwrap API response data
+ * Handles various response formats (direct array, wrapped in data/items/etc.)
+ */
+export function unwrapApiResponse<T>(response: any, expectedArrayKeys?: string[]): T {
+    if (!response) return response;
+    
+    // If it's already the expected type (array or primitive), return as-is
+    if (Array.isArray(response)) {
+        return response as T;
+    }
+    
+    // Common wrapper keys that APIs use
+    const arrayKeys = expectedArrayKeys || ['data', 'items', 'results', 'projects', 'databases', 'buckets', 'zones', 'records', 'backups', 'releases', 'domains', 'vms', 'plans'];
+    
+    // Try to unwrap from common wrapper keys
+    for (const key of arrayKeys) {
+        if (response[key] !== undefined) {
+            return response[key] as T;
+        }
+    }
+    
+    // Return as-is if no wrapper found
+    return response as T;
+}
+
+/**
+ * Safe JSON parse with fallback
+ */
+export function safeJsonParse<T>(str: string, fallback: T): T {
+    try {
+        return JSON.parse(str);
+    } catch {
+        return fallback;
+    }
+}

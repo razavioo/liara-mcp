@@ -51,7 +51,13 @@ export async function getEnvVars(
 ): Promise<EnvironmentVariable[]> {
     validateAppName(appName);
     const project = await client.get<any>(`/v1/projects/${appName}`);
-    return project.envVars || [];
+    // API returns 'envs' array in project object
+    const envs = project.envs || project.envVars || project.project?.envs || [];
+    // Map to EnvironmentVariable format (extract key and value)
+    return envs.map((env: any) => ({
+        key: env.key || env.name,
+        value: env.value || '',
+    }));
 }
 
 /**

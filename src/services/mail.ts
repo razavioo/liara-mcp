@@ -5,7 +5,7 @@ import {
     PaginationOptions,
     paginationToParams,
 } from '../api/types.js';
-import { validateRequired } from '../utils/errors.js';
+import { validateRequired, unwrapApiResponse } from '../utils/errors.js';
 
 /**
  * List all mail servers
@@ -15,7 +15,8 @@ export async function listMailServers(
     pagination?: PaginationOptions
 ): Promise<MailServer[]> {
     const params = paginationToParams(pagination);
-    return await client.get<MailServer[]>('/v1/mails', params);
+    const response = await client.get<any>('/v1/mails', params);
+    return unwrapApiResponse<MailServer[]>(response, ['mails', 'mailServers', 'data', 'items']);
 }
 
 /**
