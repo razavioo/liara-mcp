@@ -4,6 +4,10 @@
 
 A Model Context Protocol (MCP) server for the Liara cloud platform. This server enables AI assistants to deploy and manage applications, databases, and infrastructure on Liara through natural language.
 
+<div align="center">
+  <img src="assets/liara-mcp-logo.jpg" alt="Liara MCP Server" width="600">
+</div>
+
 ## Features
 
 ### Current Capabilities
