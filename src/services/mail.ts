@@ -35,10 +35,17 @@ export async function getMailServer(
 export async function createMailServer(
     client: LiaraClient,
     name: string,
-    mode: 'smtp' | 'api' = 'api'
+    mode?: 'smtp' | 'api'
 ): Promise<MailServer> {
     validateRequired(name, 'Mail server name');
-    return await client.post<MailServer>('/v1/mails', { name, mode });
+    const requestBody: { name: string; mode?: 'smtp' | 'api' } = { name };
+    if (mode) {
+        requestBody.mode = mode;
+    } else {
+        // Default to 'api' if mode is not provided
+        requestBody.mode = 'api';
+    }
+    return await client.post<MailServer>('/v1/mails', requestBody);
 }
 
 /**
