@@ -538,7 +538,24 @@ class LiaraMcpServer {
                         required: ['appName'],
                     },
                 },
-
+                {
+                    name: 'liara_delete_source',
+                    description: 'Delete an uploaded source',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            appName: {
+                                type: 'string',
+                                description: 'The name of the app',
+                            },
+                            sourceID: {
+                                type: 'string',
+                                description: 'The source ID to delete',
+                            },
+                        },
+                        required: ['appName', 'sourceID'],
+                    },
+                },
 
                 // Database Tools
                 {
@@ -1187,7 +1204,6 @@ class LiaraMcpServer {
                     },
                 },
 
-
                 // Mail Tools
                 {
                     name: 'liara_list_mail_servers',
@@ -1413,8 +1429,7 @@ class LiaraMcpServer {
                     },
                 },
                 {
-                    name: 'liara_shutdown_vm',
-                    description: 'Shutdown a virtual machine gracefully',
+                    name: 'liara_delete_vm',
                     inputSchema: {
                         type: 'object',
                         properties: {
@@ -2191,7 +2206,21 @@ class LiaraMcpServer {
                         };
                     }
 
-
+                    case 'liara_delete_source': {
+                        await deployService.deleteSource(
+                            this.client,
+                            args!.appName as string,
+                            args!.sourceID as string
+                        );
+                        return {
+                            content: [
+                                {
+                                    type: 'text',
+                                    text: `Source "${args!.sourceID}" deleted successfully.`,
+                                },
+                            ],
+                        };
+                    }
 
                     // Databases
                     case 'liara_list_databases': {
@@ -2512,8 +2541,6 @@ class LiaraMcpServer {
                         };
                     }
 
-
-
                     // Plans
                     case 'liara_list_plans': {
                         const plans = await planService.listPlans(
@@ -2591,8 +2618,6 @@ class LiaraMcpServer {
                             ],
                         };
                     }
-
-
 
                     case 'liara_list_dns_records': {
                         const records = await dnsService.listRecords(
@@ -2739,8 +2764,6 @@ class LiaraMcpServer {
                             ],
                         };
                     }
-
-
 
                     // Mail
                     case 'liara_list_mail_servers': {
@@ -2926,20 +2949,6 @@ class LiaraMcpServer {
                             ],
                         };
                     }
-
-                    case 'liara_shutdown_vm': {
-                        await iaasService.shutdownVM(this.client, args!.vmId as string);
-                        return {
-                            content: [
-                                {
-                                    type: 'text',
-                                    text: `VM "${args!.vmId}" shutdown successfully.`,
-                                },
-                            ],
-                        };
-                    }
-
-
 
                     case 'liara_delete_vm': {
                         await iaasService.deleteVM(this.client, args!.vmId as string);

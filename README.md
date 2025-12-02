@@ -194,6 +194,7 @@ This will generate the correct configuration with absolute paths for your system
 - `liara_get_release` - Get release details
 - `liara_rollback_release` - Rollback to a previous release
 - `liara_list_sources` - List uploaded sources
+- `liara_delete_source` - Delete an uploaded source
 
 
 #### Database Management
@@ -276,8 +277,6 @@ This will generate the correct configuration with absolute paths for your system
 - `liara_start_vm` - Start a VM
 - `liara_stop_vm` - Stop a VM
 - `liara_restart_vm` - Restart a VM
-- `liara_shutdown_vm` - Shutdown a VM
-
 - `liara_delete_vm` - Delete a VM
 - `liara_resize_vm` - Resize a VM
 - `liara_create_snapshot` - Create a VM snapshot
@@ -399,7 +398,7 @@ MIT
 
 This MCP server implements comprehensive coverage of the [Liara API](https://openapi.liara.ir), including:
 
-### Implemented Services (15 modules, 99 tools)
+### Implemented Services (15 modules, 100 tools)
 
 - **Apps** - Full lifecycle management (create, deploy, start, stop, restart, resize)
 - **Databases** - Complete database management with backup/restore (8 database types)

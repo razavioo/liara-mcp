@@ -40,7 +40,7 @@ export async function addDomain(
 ): Promise<Domain> {
     validateRequired(appName, 'App name');
     validateRequired(domain, 'Domain');
-    
+
     return await client.post<Domain>('/v1/domains', {
         project: appName,
         domain,
