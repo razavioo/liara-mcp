@@ -58,6 +58,14 @@ npm run build
 
 ## Configuration
 
+The server supports multiple ways to configure your API token:
+
+### Option 1: Environment Variables (Recommended for MCP clients)
+
+Set the token directly in your MCP client configuration (see Usage section below).
+
+### Option 2: .env File (For local development)
+
 1. Copy the example environment file:
 ```bash
 cp .env.example .env
@@ -69,6 +77,8 @@ LIARA_API_TOKEN=your_api_token_here
 LIARA_TEAM_ID=optional_team_id
 LIARA_API_BASE_URL=https://api.iran.liara.ir
 ```
+
+The server automatically loads `.env` files using dotenv, so no additional setup is required.
 
 ### Getting Your API Token
 
@@ -85,9 +95,27 @@ If you're working with a team account, you can find your Team ID in the API sect
 
 ### With MCP Client
 
-#### If installed globally via npm:
+#### Recommended: Using npx (No installation required)
 
-Add to your MCP client configuration (e.g., Claude Desktop):
+Add to your MCP client configuration (e.g., Claude Desktop, Cursor):
+
+```json
+{
+  "mcpServers": {
+    "liara": {
+      "command": "npx",
+      "args": ["-y", "liara-mcp"],
+      "env": {
+        "LIARA_API_TOKEN": "your_api_token_here"
+      }
+    }
+  }
+}
+```
+
+This will automatically download and use the latest version from npm.
+
+#### Alternative: If installed globally via npm:
 
 ```json
 {
@@ -102,7 +130,7 @@ Add to your MCP client configuration (e.g., Claude Desktop):
 }
 ```
 
-#### If installed locally or from source:
+#### Alternative: If installed locally or from source:
 
 ```json
 {
