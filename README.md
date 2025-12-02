@@ -386,14 +386,6 @@ For official Liara support, please contact [Liara Support](https://liara.ir).
 
 Contributions are welcome! Please feel free to submit issues or pull requests on [GitHub](https://github.com/razavioo/liara-mcp).
 
-## Publishing to Famous Repositories
-
-Want to help get liara-mcp listed in famous GitHub repositories? Check out our [Publishing Guide](PUBLISHING_GUIDE.md) which includes:
-- Step-by-step submission instructions
-- Pre-formatted entries for popular repositories (awesome, public-apis, etc.)
-- Ready-to-use submission files in the `SUBMISSIONS/` directory
-- Helper script for easy submission preparation
-
 ## Support
 
 For issues related to:
