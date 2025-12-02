@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+// Load environment variables from .env file if it exists
+import 'dotenv/config';
+
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
@@ -39,7 +42,7 @@ class LiaraMcpServer {
         this.server = new Server(
             {
                 name: 'liara-mcp',
-                version: '0.1.0',
+                version: '0.1.2',
             },
             {
                 capabilities: {
