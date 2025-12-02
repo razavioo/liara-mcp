@@ -42,7 +42,7 @@ class LiaraMcpServer {
         this.server = new Server(
             {
                 name: 'liara-mcp',
-                version: '0.1.2',
+                version: '0.1.3',
             },
             {
                 capabilities: {

@@ -36,29 +36,11 @@ MariaDB, MySQL, PostgreSQL, MSSQL, MongoDB, Redis, ElasticSearch, RabbitMQ
 
 ## Installation
 
-### Via npm (Recommended)
-
 ```bash
-# Install globally
 npm install -g liara-mcp
-
-# Or install locally in your project
-npm install liara-mcp
 ```
 
-### From Source
-
-```bash
-# Clone the repository
-git clone https://github.com/razavioo/liara-mcp.git
-cd liara-mcp
-
-# Install dependencies
-npm install
-
-# Build the TypeScript code
-npm run build
-```
+Or use directly with npx (no installation required).
 
 ## Configuration
 
@@ -97,11 +79,11 @@ If you're working with a team account, you can find your Team ID in the API sect
 
 ## Usage
 
-### With MCP Client
+### With Claude Desktop / Cursor / VS Code
 
-#### Recommended: Using npx (No installation required)
-
-Add to your MCP client configuration (e.g., Claude Desktop, Cursor):
+Add the following to your MCP configuration file:
+- **Claude Desktop:** `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows)
+- **Cursor:** `.cursor/mcp.json`
 
 ```json
 {
@@ -117,38 +99,15 @@ Add to your MCP client configuration (e.g., Claude Desktop, Cursor):
 }
 ```
 
-This will automatically download and use the latest version from npm.
+### Troubleshooting: PATH Issues (nvm/nodenv users)
 
-#### Alternative: If installed globally via npm:
+If you see `spawn npx ENOENT` error, run the setup wizard:
 
-```json
-{
-  "mcpServers": {
-    "liara": {
-      "command": "liara-mcp",
-      "env": {
-        "LIARA_API_TOKEN": "your_api_token_here"
-      }
-    }
-  }
-}
+```bash
+npx liara-mcp-setup
 ```
 
-#### Alternative: If installed locally or from source:
-
-```json
-{
-  "mcpServers": {
-    "liara": {
-      "command": "node",
-      "args": ["/path/to/liara-mcp/dist/index.js"],
-      "env": {
-        "LIARA_API_TOKEN": "your_api_token_here"
-      }
-    }
-  }
-}
-```
+This will generate the correct configuration with absolute paths for your system.
 
 ### Available Tools
 
