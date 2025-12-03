@@ -85,7 +85,6 @@ describe('Mail Service', () => {
             const result = await mailService.createMailServer(mockClient, 'my-mail', undefined, 'plan-123', 'example.com');
 
             expect(mockMailClient.post).toHaveBeenCalledWith('/v1/mails', {
-                name: 'my-mail',
                 mode: 'DEV',
                 plan: 'plan-123',
                 planID: 'plan-123',
@@ -107,7 +106,6 @@ describe('Mail Service', () => {
             const result = await mailService.createMailServer(mockClient, 'my-mail', 'LIVE', 'plan-456', 'test.com');
 
             expect(mockMailClient.post).toHaveBeenCalledWith('/v1/mails', {
-                name: 'my-mail',
                 mode: 'LIVE',
                 plan: 'plan-456',
                 planID: 'plan-456',

@@ -42,7 +42,7 @@ class LiaraMcpServer {
         this.server = new Server(
             {
                 name: 'liara-mcp',
-                version: '0.2.3',
+                version: '0.2.4',
             },
             {
                 capabilities: {
@@ -1251,7 +1251,7 @@ class LiaraMcpServer {
                                 description: 'Domain name for the mail server (required)',
                             },
                         },
-                        required: ['name', 'planID', 'domain'],
+                        required: ['planID', 'domain'],
                     },
                 },
                 {
