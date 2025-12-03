@@ -54,7 +54,7 @@ describe('Mail Service', () => {
                 {
                     _id: '1',
                     name: 'mail1',
-                    mode: 'api',
+                    mode: 'DEV',
                     status: 'ACTIVE',
                     createdAt: '2024-01-01',
                 },
@@ -76,7 +76,7 @@ describe('Mail Service', () => {
             const mockServer: MailServer = {
                 _id: '1',
                 name: 'my-mail',
-                mode: 'api',
+                mode: 'DEV',
                 status: 'ACTIVE',
                 createdAt: '2024-01-01',
             };
@@ -86,7 +86,7 @@ describe('Mail Service', () => {
 
             expect(mockMailClient.post).toHaveBeenCalledWith('/v1/mails', {
                 name: 'my-mail',
-                mode: 'api',
+                mode: 'DEV',
                 plan: 'plan-123',
                 planID: 'plan-123',
                 domain: 'example.com',
@@ -98,17 +98,17 @@ describe('Mail Service', () => {
             const mockServer: MailServer = {
                 _id: '1',
                 name: 'my-mail',
-                mode: 'smtp',
+                mode: 'LIVE',
                 status: 'ACTIVE',
                 createdAt: '2024-01-01',
             };
             (mockMailClient.post as any).mockResolvedValue(mockServer);
 
-            const result = await mailService.createMailServer(mockClient, 'my-mail', 'smtp', 'plan-456', 'test.com');
+            const result = await mailService.createMailServer(mockClient, 'my-mail', 'LIVE', 'plan-456', 'test.com');
 
             expect(mockMailClient.post).toHaveBeenCalledWith('/v1/mails', {
                 name: 'my-mail',
-                mode: 'smtp',
+                mode: 'LIVE',
                 plan: 'plan-456',
                 planID: 'plan-456',
                 domain: 'test.com',

@@ -284,7 +284,7 @@ export interface CreateVmRequest {
 export interface MailServer {
     _id: string;
     name: string;
-    mode: 'smtp' | 'api';
+    mode: 'DEV' | 'LIVE';
     status: 'ACTIVE' | 'INACTIVE';
     createdAt: string;
 }

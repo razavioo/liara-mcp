@@ -60,22 +60,22 @@ export async function getMailServer(
 export async function createMailServer(
     client: LiaraClient,
     name: string,
-    mode?: 'smtp' | 'api',
+    mode?: 'DEV' | 'LIVE',
     planID?: string,
     domain?: string
 ): Promise<MailServer> {
     validateRequired(name, 'Mail server name');
     validateRequired(planID, 'Plan ID');
     validateRequired(domain, 'Domain');
-    const requestBody: { name: string; mode?: 'smtp' | 'api'; plan?: string; planID?: string; domain?: string } = { 
+    const requestBody: { name: string; mode?: 'DEV' | 'LIVE'; plan?: string; planID?: string; domain?: string } = { 
         name,
         domain: domain!,
     };
     if (mode) {
         requestBody.mode = mode;
     } else {
-        // Default to 'api' if mode is not provided
-        requestBody.mode = 'api';
+        // Default to 'DEV' if mode is not provided
+        requestBody.mode = 'DEV';
     }
     if (planID) {
         requestBody.plan = planID;
