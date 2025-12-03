@@ -8,14 +8,37 @@ import {
 import { validateRequired, unwrapApiResponse } from '../utils/errors.js';
 
 /**
+ * Create a specialized Mail service client with the Mail API base URL
+ */
+function createMailClient(client: LiaraClient): LiaraClient {
+    // Access the internal client to get the API token
+    const internalClient = (client as any).client;
+    const apiToken = internalClient?.defaults?.headers?.Authorization?.replace('Bearer ', '') || 
+                     process.env.LIARA_API_TOKEN;
+    const teamId = (client as any).teamId || process.env.LIARA_TEAM_ID;
+
+    if (!apiToken) {
+        throw new Error('API token is required for Mail operations');
+    }
+
+    // Create new client with Mail service base URL
+    return new LiaraClient({
+        apiToken,
+        teamId,
+        baseURL: 'https://mail-service.liara.ir/api',
+    });
+}
+
+/**
  * List all mail servers
  */
 export async function listMailServers(
     client: LiaraClient,
     pagination?: PaginationOptions
 ): Promise<MailServer[]> {
+    const mailClient = createMailClient(client);
     const params = paginationToParams(pagination);
-    const response = await client.get<any>('/v1/mails', params);
+    const response = await mailClient.get<any>('/v1/mails', params);
     return unwrapApiResponse<MailServer[]>(response, ['mails', 'mailServers', 'data', 'items']);
 }
 
@@ -27,7 +50,8 @@ export async function getMailServer(
     mailId: string
 ): Promise<MailServer> {
     validateRequired(mailId, 'Mail server ID');
-    return await client.get<MailServer>(`/v1/mails/${mailId}`);
+    const mailClient = createMailClient(client);
+    return await mailClient.get<MailServer>(`/v1/mails/${mailId}`);
 }
 
 /**
@@ -46,7 +70,8 @@ export async function createMailServer(
         // Default to 'api' if mode is not provided
         requestBody.mode = 'api';
     }
-    const response = await client.post<any>('/v1/mails', requestBody);
+    const mailClient = createMailClient(client);
+    const response = await mailClient.post<any>('/v1/mails', requestBody);
     return unwrapApiResponse<MailServer>(response, ['mail', 'mailServer', 'data']);
 }
 
@@ -58,7 +83,8 @@ export async function deleteMailServer(
     mailId: string
 ): Promise<void> {
     validateRequired(mailId, 'Mail server ID');
-    await client.delete(`/v1/mails/${mailId}`);
+    const mailClient = createMailClient(client);
+    await mailClient.delete(`/v1/mails/${mailId}`);
 }
 
 /**
@@ -78,7 +104,8 @@ export async function sendEmail(
         throw new Error('Either html or text content is required');
     }
 
-    return await client.post<{ message: string; messageId?: string }>(
+    const mailClient = createMailClient(client);
+    return await mailClient.post<{ message: string; messageId?: string }>(
         `/v1/mails/${mailId}/send`,
         request
     );
@@ -92,7 +119,8 @@ export async function startMailServer(
     mailId: string
 ): Promise<void> {
     validateRequired(mailId, 'Mail server ID');
-    await client.post(`/v1/mails/${mailId}/actions/start`);
+    const mailClient = createMailClient(client);
+    await mailClient.post(`/v1/mails/${mailId}/actions/start`);
 }
 
 /**
@@ -103,7 +131,8 @@ export async function stopMailServer(
     mailId: string
 ): Promise<void> {
     validateRequired(mailId, 'Mail server ID');
-    await client.post(`/v1/mails/${mailId}/actions/stop`);
+    const mailClient = createMailClient(client);
+    await mailClient.post(`/v1/mails/${mailId}/actions/stop`);
 }
 
 /**
@@ -114,6 +143,7 @@ export async function restartMailServer(
     mailId: string
 ): Promise<void> {
     validateRequired(mailId, 'Mail server ID');
-    await client.post(`/v1/mails/${mailId}/actions/restart`);
+    const mailClient = createMailClient(client);
+    await mailClient.post(`/v1/mails/${mailId}/actions/restart`);
 }
 

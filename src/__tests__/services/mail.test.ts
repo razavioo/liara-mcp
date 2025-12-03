@@ -3,15 +3,49 @@ import { LiaraClient } from '../../api/client.js';
 import * as mailService from '../../services/mail.js';
 import { MailServer, SendEmailRequest } from '../../api/types.js';
 
+// Mock LiaraClient
+vi.mock('../../api/client.js', () => {
+    const mockMailClient = {
+        get: vi.fn(),
+        post: vi.fn(),
+        delete: vi.fn(),
+    };
+
+    return {
+        LiaraClient: vi.fn().mockImplementation(() => mockMailClient),
+        createLiaraClient: vi.fn(),
+    };
+});
+
 describe('Mail Service', () => {
     let mockClient: LiaraClient;
+    let mockMailClient: LiaraClient;
 
     beforeEach(() => {
-        mockClient = {
+        mockMailClient = {
             get: vi.fn(),
             post: vi.fn(),
             delete: vi.fn(),
         } as any;
+
+        mockClient = {
+            get: vi.fn(),
+            post: vi.fn(),
+            delete: vi.fn(),
+            client: {
+                defaults: {
+                    headers: {
+                        Authorization: 'Bearer test-token',
+                    },
+                },
+            },
+        } as any;
+
+        // Mock process.env for Mail client creation
+        process.env.LIARA_API_TOKEN = 'test-token';
+
+        // Mock LiaraClient constructor to return our mock mail client
+        (LiaraClient as any).mockImplementation(() => mockMailClient);
     });
 
     describe('listMailServers', () => {
@@ -25,11 +59,11 @@ describe('Mail Service', () => {
                     createdAt: '2024-01-01',
                 },
             ];
-            (mockClient.get as any).mockResolvedValue(mockServers);
+            (mockMailClient.get as any).mockResolvedValue(mockServers);
 
             const result = await mailService.listMailServers(mockClient, { page: 1, perPage: 10 });
 
-            expect(mockClient.get).toHaveBeenCalledWith('/v1/mails', {
+            expect(mockMailClient.get).toHaveBeenCalledWith('/v1/mails', {
                 page: 1,
                 perPage: 10,
             });
@@ -46,11 +80,11 @@ describe('Mail Service', () => {
                 status: 'ACTIVE',
                 createdAt: '2024-01-01',
             };
-            (mockClient.post as any).mockResolvedValue(mockServer);
+            (mockMailClient.post as any).mockResolvedValue(mockServer);
 
             const result = await mailService.createMailServer(mockClient, 'my-mail');
 
-            expect(mockClient.post).toHaveBeenCalledWith('/v1/mails', {
+            expect(mockMailClient.post).toHaveBeenCalledWith('/v1/mails', {
                 name: 'my-mail',
                 mode: 'api',
             });
@@ -65,11 +99,11 @@ describe('Mail Service', () => {
                 status: 'ACTIVE',
                 createdAt: '2024-01-01',
             };
-            (mockClient.post as any).mockResolvedValue(mockServer);
+            (mockMailClient.post as any).mockResolvedValue(mockServer);
 
             const result = await mailService.createMailServer(mockClient, 'my-mail', 'smtp');
 
-            expect(mockClient.post).toHaveBeenCalledWith('/v1/mails', {
+            expect(mockMailClient.post).toHaveBeenCalledWith('/v1/mails', {
                 name: 'my-mail',
                 mode: 'smtp',
             });
@@ -85,11 +119,11 @@ describe('Mail Service', () => {
                 subject: 'Test',
                 html: '<p>Hello</p>',
             };
-            (mockClient.post as any).mockResolvedValue({ message: 'Sent', messageId: 'msg-123' });
+            (mockMailClient.post as any).mockResolvedValue({ message: 'Sent', messageId: 'msg-123' });
 
             const result = await mailService.sendEmail(mockClient, 'mail1', request);
 
-            expect(mockClient.post).toHaveBeenCalledWith('/v1/mails/mail1/send', request);
+            expect(mockMailClient.post).toHaveBeenCalledWith('/v1/mails/mail1/send', request);
             expect(result.message).toBe('Sent');
         });
 
@@ -100,7 +134,7 @@ describe('Mail Service', () => {
                 subject: 'Test',
                 text: 'Hello',
             };
-            (mockClient.post as any).mockResolvedValue({ message: 'Sent' });
+            (mockMailClient.post as any).mockResolvedValue({ message: 'Sent' });
 
             const result = await mailService.sendEmail(mockClient, 'mail1', request);
 
@@ -122,27 +156,27 @@ describe('Mail Service', () => {
 
     describe('lifecycle operations', () => {
         it('should start mail server', async () => {
-            (mockClient.post as any).mockResolvedValue(undefined);
+            (mockMailClient.post as any).mockResolvedValue(undefined);
 
             await mailService.startMailServer(mockClient, 'mail1');
 
-            expect(mockClient.post).toHaveBeenCalledWith('/v1/mails/mail1/actions/start');
+            expect(mockMailClient.post).toHaveBeenCalledWith('/v1/mails/mail1/actions/start');
         });
 
         it('should stop mail server', async () => {
-            (mockClient.post as any).mockResolvedValue(undefined);
+            (mockMailClient.post as any).mockResolvedValue(undefined);
 
             await mailService.stopMailServer(mockClient, 'mail1');
 
-            expect(mockClient.post).toHaveBeenCalledWith('/v1/mails/mail1/actions/stop');
+            expect(mockMailClient.post).toHaveBeenCalledWith('/v1/mails/mail1/actions/stop');
         });
 
         it('should restart mail server', async () => {
-            (mockClient.post as any).mockResolvedValue(undefined);
+            (mockMailClient.post as any).mockResolvedValue(undefined);
 
             await mailService.restartMailServer(mockClient, 'mail1');
 
-            expect(mockClient.post).toHaveBeenCalledWith('/v1/mails/mail1/actions/restart');
+            expect(mockMailClient.post).toHaveBeenCalledWith('/v1/mails/mail1/actions/restart');
         });
     });
 });
