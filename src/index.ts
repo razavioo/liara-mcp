@@ -42,7 +42,7 @@ class LiaraMcpServer {
         this.server = new Server(
             {
                 name: 'liara-mcp',
-                version: '0.2.1',
+                version: '0.2.2',
             },
             {
                 capabilities: {
@@ -1246,8 +1246,12 @@ class LiaraMcpServer {
                                 type: 'string',
                                 description: 'Plan ID for the mail server (required)',
                             },
+                            domain: {
+                                type: 'string',
+                                description: 'Domain name for the mail server (required)',
+                            },
                         },
-                        required: ['name', 'planID'],
+                        required: ['name', 'planID', 'domain'],
                     },
                 },
                 {
@@ -2799,7 +2803,8 @@ class LiaraMcpServer {
                             this.client,
                             args!.name as string,
                             args?.mode as 'smtp' | 'api' | undefined,
-                            args?.planID as string | undefined
+                            args?.planID as string | undefined,
+                            args?.domain as string | undefined
                         );
                         return {
                             content: [
