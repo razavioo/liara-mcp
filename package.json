@@ -1,6 +1,6 @@
 {
   "name": "liara-mcp",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "MCP server for Liara cloud platform - deploy and manage apps, databases, and infrastructure",
   "main": "dist/index.js",
   "type": "module",

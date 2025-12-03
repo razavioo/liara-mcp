@@ -46,7 +46,8 @@ export async function createMailServer(
         // Default to 'api' if mode is not provided
         requestBody.mode = 'api';
     }
-    return await client.post<MailServer>('/v1/mails', requestBody);
+    const response = await client.post<any>('/v1/mails', requestBody);
+    return unwrapApiResponse<MailServer>(response, ['mail', 'mailServer', 'data']);
 }
 
 /**
