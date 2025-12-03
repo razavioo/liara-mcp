@@ -72,7 +72,7 @@ describe('Mail Service', () => {
     });
 
     describe('createMailServer', () => {
-        it('should create a mail server with default mode', async () => {
+        it('should create a mail server with default mode and plan', async () => {
             const mockServer: MailServer = {
                 _id: '1',
                 name: 'my-mail',
@@ -82,16 +82,18 @@ describe('Mail Service', () => {
             };
             (mockMailClient.post as any).mockResolvedValue(mockServer);
 
-            const result = await mailService.createMailServer(mockClient, 'my-mail');
+            const result = await mailService.createMailServer(mockClient, 'my-mail', undefined, 'plan-123');
 
             expect(mockMailClient.post).toHaveBeenCalledWith('/v1/mails', {
                 name: 'my-mail',
                 mode: 'api',
+                plan: 'plan-123',
+                planID: 'plan-123',
             });
             expect(result).toEqual(mockServer);
         });
 
-        it('should create a mail server with specified mode', async () => {
+        it('should create a mail server with specified mode and plan', async () => {
             const mockServer: MailServer = {
                 _id: '1',
                 name: 'my-mail',
@@ -101,11 +103,13 @@ describe('Mail Service', () => {
             };
             (mockMailClient.post as any).mockResolvedValue(mockServer);
 
-            const result = await mailService.createMailServer(mockClient, 'my-mail', 'smtp');
+            const result = await mailService.createMailServer(mockClient, 'my-mail', 'smtp', 'plan-456');
 
             expect(mockMailClient.post).toHaveBeenCalledWith('/v1/mails', {
                 name: 'my-mail',
                 mode: 'smtp',
+                plan: 'plan-456',
+                planID: 'plan-456',
             });
             expect(result).toEqual(mockServer);
         });

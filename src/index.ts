@@ -42,7 +42,7 @@ class LiaraMcpServer {
         this.server = new Server(
             {
                 name: 'liara-mcp',
-                version: '0.2.0',
+                version: '0.2.1',
             },
             {
                 capabilities: {
@@ -1242,8 +1242,12 @@ class LiaraMcpServer {
                                 description: 'Mail server mode',
                                 enum: ['smtp', 'api'],
                             },
+                            planID: {
+                                type: 'string',
+                                description: 'Plan ID for the mail server (required)',
+                            },
                         },
-                        required: ['name'],
+                        required: ['name', 'planID'],
                     },
                 },
                 {
@@ -2794,7 +2798,8 @@ class LiaraMcpServer {
                         const server = await mailService.createMailServer(
                             this.client,
                             args!.name as string,
-                            args?.mode as 'smtp' | 'api' | undefined
+                            args?.mode as 'smtp' | 'api' | undefined,
+                            args?.planID as string | undefined
                         );
                         return {
                             content: [

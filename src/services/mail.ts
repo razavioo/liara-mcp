@@ -60,15 +60,20 @@ export async function getMailServer(
 export async function createMailServer(
     client: LiaraClient,
     name: string,
-    mode?: 'smtp' | 'api'
+    mode?: 'smtp' | 'api',
+    planID?: string
 ): Promise<MailServer> {
     validateRequired(name, 'Mail server name');
-    const requestBody: { name: string; mode?: 'smtp' | 'api' } = { name };
+    const requestBody: { name: string; mode?: 'smtp' | 'api'; plan?: string; planID?: string } = { name };
     if (mode) {
         requestBody.mode = mode;
     } else {
         // Default to 'api' if mode is not provided
         requestBody.mode = 'api';
+    }
+    if (planID) {
+        requestBody.plan = planID;
+        requestBody.planID = planID;
     }
     const mailClient = createMailClient(client);
     const response = await mailClient.post<any>('/v1/mails', requestBody);
