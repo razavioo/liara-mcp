@@ -42,7 +42,7 @@ class LiaraMcpServer {
         this.server = new Server(
             {
                 name: 'liara-mcp',
-                version: '0.2.4',
+                version: '0.2.5',
             },
             {
                 capabilities: {
@@ -1389,6 +1389,10 @@ class LiaraMcpServer {
                             sshKey: {
                                 type: 'string',
                                 description: 'SSH public key (optional)',
+                            },
+                            network: {
+                                type: 'string',
+                                description: 'Network ID (optional, but may be required by the API)',
                             },
                         },
                         required: ['name', 'planID', 'os'],
