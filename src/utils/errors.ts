@@ -29,8 +29,12 @@ export class LiaraMcpError extends Error {
 
 /**
  * Format error for MCP response
+ * Uses formatMessage() if error is LiaraMcpError to include suggestions
  */
 export function formatErrorForMcp(error: unknown): string {
+    if (error instanceof LiaraMcpError) {
+        return error.formatMessage();
+    }
     if (error instanceof Error) {
         return error.message;
     }

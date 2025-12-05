@@ -13,7 +13,7 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { createLiaraClient } from './api/client.js';
 import { formatErrorForMcp } from './utils/errors.js';
-import { PaginationOptions } from './api/types.js';
+import { PaginationOptions, CreateProjectRequest } from './api/types.js';
 import * as appService from './services/apps.js';
 import * as envService from './services/environment.js';
 import * as deployService from './services/deployment.js';
@@ -1906,12 +1906,16 @@ Note: Setting variables will replace existing ones unless you merge them manuall
                     }
 
                     case 'liara_create_app': {
-                        const app = await appService.createApp(this.client, args as any);
+                        const app = await appService.createApp(this.client, args as unknown as CreateProjectRequest);
                         return {
                             content: [
                                 {
                                     type: 'text',
-                                    text: `App "${app.name}" created successfully.\n${JSON.stringify(app, null, 2)}`,
+                                    text: JSON.stringify({
+                                        success: true,
+                                        data: app,
+                                        message: `App "${app.name}" created successfully`
+                                    }, null, 2),
                                 },
                             ],
                         };
@@ -2009,30 +2013,33 @@ Note: Setting variables will replace existing ones unless you merge them manuall
                                 content: [
                                     {
                                         type: 'text',
-                                        text: `Command executed successfully.\nExit Code: ${result.exitCode}\nOutput:\n${result.output}`,
+                                        text: JSON.stringify({
+                                            success: true,
+                                            data: result,
+                                            message: 'Command executed successfully'
+                                        }, null, 2),
                                     },
                                 ],
                             };
                         } catch (error: unknown) {
-                            const err = error as Error;
-                            const errorMessage = err instanceof Error ? err.message : String(error);
-                            const suggestions = (err as { suggestions?: string[] }).suggestions;
-                            
-                            let message = `Error executing command: ${errorMessage}`;
-                            if (suggestions && suggestions.length > 0) {
-                                message += '\n\nSuggestions:';
-                                suggestions.forEach((suggestion, index) => {
-                                    message += `\n${index + 1}. ${suggestion}`;
-                                });
-                            } else {
-                                message += '\n\nNote: Command execution may require WebSocket support. Consider using the Liara CLI: liara app shell --app ' + (args!.appName as string) + ' -- ' + (args!.command as string);
-                            }
+                            const errorMessage = formatErrorForMcp(error);
+                            const err = error as { code?: string; suggestions?: string[] };
                             
                             return {
                                 content: [
                                     {
                                         type: 'text',
-                                        text: message,
+                                        text: JSON.stringify({
+                                            success: false,
+                                            error: {
+                                                code: err.code || 'EXEC_COMMAND_ERROR',
+                                                message: errorMessage,
+                                                suggestions: err.suggestions || [
+                                                    'Command execution may require WebSocket support',
+                                                    'Consider using the Liara CLI: liara app shell --app ' + (args!.appName as string) + ' -- ' + (args!.command as string)
+                                                ]
+                                            }
+                                        }, null, 2),
                                     },
                                 ],
                                 isError: true,
@@ -2301,7 +2308,11 @@ Note: Setting variables will replace existing ones unless you merge them manuall
                             content: [
                                 {
                                     type: 'text',
-                                    text: JSON.stringify(connection, null, 2),
+                                    text: JSON.stringify({
+                                        success: true,
+                                        data: connection,
+                                        message: `Database connection info for "${args!.databaseName}" retrieved successfully`
+                                    }, null, 2),
                                 },
                             ],
                         };
@@ -3368,11 +3379,19 @@ Note: Setting variables will replace existing ones unless you merge them manuall
                 }
             } catch (error) {
                 const errorMessage = formatErrorForMcp(error);
+                const err = error as { code?: string; suggestions?: string[] };
                 return {
                     content: [
                         {
                             type: 'text',
-                            text: `Error: ${errorMessage}`,
+                            text: JSON.stringify({
+                                success: false,
+                                error: {
+                                    code: err.code || 'UNKNOWN_ERROR',
+                                    message: errorMessage,
+                                    suggestions: err.suggestions
+                                }
+                            }, null, 2),
                         },
                     ],
                     isError: true,
