@@ -64,6 +64,7 @@ export async function createVM(
     validateRequired(request.name, 'VM name');
     validateRequired(request.planID, 'Plan ID');
     validateRequired(request.os, 'Operating system');
+    validateRequired(request.network, 'Network ID');
 
     const iaasClient = createIaaSClient(client);
     return await iaasClient.post<VirtualMachine>('/vm', request);

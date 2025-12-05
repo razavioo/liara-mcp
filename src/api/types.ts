@@ -278,7 +278,7 @@ export interface CreateVmRequest {
     planID: string;
     os: string;
     sshKey?: string;
-    network?: string;
+    network: string;
 }
 
 // Email types
