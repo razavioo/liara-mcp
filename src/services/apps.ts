@@ -42,6 +42,7 @@ export async function createApp(
     validateAppName(request.name);
     validateRequired(request.platform, 'Platform');
     validateRequired(request.planID, 'Plan ID');
+    validateRequired(request.network, 'Network ID');
 
     return await client.post<Project>('/v1/projects', request);
 }
