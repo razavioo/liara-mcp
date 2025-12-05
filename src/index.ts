@@ -42,7 +42,7 @@ class LiaraMcpServer {
         this.server = new Server(
             {
                 name: 'liara-mcp',
-                version: '0.2.9',
+                version: '0.3.0',
             },
             {
                 capabilities: {
@@ -248,11 +248,33 @@ class LiaraMcpServer {
                         required: ['name', 'planID'],
                     },
                 },
+                {
+                    name: 'liara_exec_command',
+                    description: 'Execute a command in the app container (e.g., database migrations, initialization scripts). Note: This requires WebSocket support and may not work in all environments.',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            appName: {
+                                type: 'string',
+                                description: 'The name of the app',
+                            },
+                            command: {
+                                type: 'string',
+                                description: 'Command to execute (e.g., "python -m src.admin.scripts.init_db")',
+                            },
+                            workingDir: {
+                                type: 'string',
+                                description: 'Working directory for the command (optional)',
+                            },
+                        },
+                        required: ['appName', 'command'],
+                    },
+                },
 
                 // Environment Variable Tools
                 {
                     name: 'liara_set_env_vars',
-                    description: 'Set or update environment variables for an app',
+                    description: 'Set or update environment variables for an app (can set single or multiple)',
                     inputSchema: {
                         type: 'object',
                         properties: {
@@ -262,7 +284,7 @@ class LiaraMcpServer {
                             },
                             variables: {
                                 type: 'array',
-                                description: 'Array of environment variables',
+                                description: 'Array of environment variables (use single-item array for one variable)',
                                 items: {
                                     type: 'object',
                                     properties: {
@@ -280,28 +302,6 @@ class LiaraMcpServer {
                             },
                         },
                         required: ['appName', 'variables'],
-                    },
-                },
-                {
-                    name: 'liara_set_env_var',
-                    description: 'Set a single environment variable for an app',
-                    inputSchema: {
-                        type: 'object',
-                        properties: {
-                            appName: {
-                                type: 'string',
-                                description: 'The name of the app',
-                            },
-                            key: {
-                                type: 'string',
-                                description: 'Variable name (uppercase, alphanumeric with underscores)',
-                            },
-                            value: {
-                                type: 'string',
-                                description: 'Variable value',
-                            },
-                        },
-                        required: ['appName', 'key', 'value'],
                     },
                 },
                 {
@@ -338,7 +338,7 @@ class LiaraMcpServer {
                 },
                 {
                     name: 'liara_delete_env_vars',
-                    description: 'Delete/unset multiple environment variables for an app',
+                    description: 'Delete/unset environment variables for an app (can delete single or multiple)',
                     inputSchema: {
                         type: 'object',
                         properties: {
@@ -348,7 +348,7 @@ class LiaraMcpServer {
                             },
                             keys: {
                                 type: 'array',
-                                description: 'Array of variable names to delete',
+                                description: 'Array of variable names to delete (use single-item array for one variable)',
                                 items: {
                                     type: 'string',
                                 },
@@ -1450,20 +1450,6 @@ class LiaraMcpServer {
                 },
                 {
                     name: 'liara_delete_vm',
-                    inputSchema: {
-                        type: 'object',
-                        properties: {
-                            vmId: {
-                                type: 'string',
-                                description: 'The VM ID',
-                            },
-                        },
-                        required: ['vmId'],
-                    },
-                },
-
-                {
-                    name: 'liara_delete_vm',
                     description: 'Delete a virtual machine',
                     inputSchema: {
                         type: 'object',
@@ -1966,6 +1952,22 @@ class LiaraMcpServer {
                         };
                     }
 
+                    case 'liara_scale_app': {
+                        await appService.scaleApp(
+                            this.client,
+                            args!.name as string,
+                            args!.replicas as number
+                        );
+                        return {
+                            content: [
+                                {
+                                    type: 'text',
+                                    text: `App "${args!.name}" scaled to ${args!.replicas} replica(s) successfully.`,
+                                },
+                            ],
+                        };
+                    }
+
                     case 'liara_resize_app': {
                         await appService.resizeApp(
                             this.client,
@@ -1980,6 +1982,35 @@ class LiaraMcpServer {
                                 },
                             ],
                         };
+                    }
+
+                    case 'liara_exec_command': {
+                        try {
+                            const result = await appService.execCommand(
+                                this.client,
+                                args!.appName as string,
+                                args!.command as string,
+                                args!.workingDir as string | undefined
+                            );
+                            return {
+                                content: [
+                                    {
+                                        type: 'text',
+                                        text: `Command executed successfully.\nExit Code: ${result.exitCode}\nOutput:\n${result.output}`,
+                                    },
+                                ],
+                            };
+                        } catch (error: any) {
+                            return {
+                                content: [
+                                    {
+                                        type: 'text',
+                                        text: `Error executing command: ${error.message}\n\nNote: Command execution may require WebSocket support. Consider using the Liara CLI: liara app shell --app ${args!.appName} -- ${args!.command}`,
+                                    },
+                                ],
+                                isError: true,
+                            };
+                        }
                     }
 
                     // Environment Variables
@@ -1999,23 +2030,6 @@ class LiaraMcpServer {
                         };
                     }
 
-                    case 'liara_set_env_var': {
-                        const result = await envService.setEnvVar(
-                            this.client,
-                            args!.appName as string,
-                            args!.key as string,
-                            args!.value as string
-                        );
-                        return {
-                            content: [
-                                {
-                                    type: 'text',
-                                    text: result.message || `Environment variable ${args!.key} set successfully.`,
-                                },
-                            ],
-                        };
-                    }
-
                     case 'liara_get_env_vars': {
                         const envVars = await envService.getEnvVars(this.client, args!.appName as string);
                         return {
@@ -2023,22 +2037,6 @@ class LiaraMcpServer {
                                 {
                                     type: 'text',
                                     text: JSON.stringify(envVars, null, 2),
-                                },
-                            ],
-                        };
-                    }
-
-                    case 'liara_delete_env_var': {
-                        const result = await envService.deleteEnvVar(
-                            this.client,
-                            args!.appName as string,
-                            args!.key as string
-                        );
-                        return {
-                            content: [
-                                {
-                                    type: 'text',
-                                    text: result.message || `Environment variable ${args!.key} deleted successfully.`,
                                 },
                             ],
                         };

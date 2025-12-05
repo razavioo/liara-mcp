@@ -82,6 +82,21 @@ export async function stopApp(
 }
 
 /**
+ * Scale an app to a specific number of replicas
+ */
+export async function scaleApp(
+    client: LiaraClient,
+    name: string,
+    replicas: number
+): Promise<void> {
+    validateAppName(name);
+    if (replicas < 0) {
+        throw new Error('Replicas must be 0 or greater');
+    }
+    await client.post(`/v1/projects/${name}/actions/scale`, { scale: replicas });
+}
+
+/**
  * Restart an app
  */
 export async function restartApp(
@@ -103,6 +118,45 @@ export async function resizeApp(
     validateAppName(name);
     validateRequired(planID, 'Plan ID');
     await client.post(`/v1/projects/${name}/resize`, { planID });
+}
+
+/**
+ * Execute a command in the app container
+ * Note: This may require WebSocket support depending on Liara API implementation
+ * For now, we'll attempt to use HTTP endpoint if available
+ */
+export async function execCommand(
+    client: LiaraClient,
+    appName: string,
+    command: string,
+    workingDir?: string
+): Promise<{ output: string; exitCode: number }> {
+    validateAppName(appName);
+    validateRequired(command, 'Command');
+    
+    // Try HTTP endpoint first (if available)
+    // Note: Liara may require WebSocket for interactive commands
+    // This is a placeholder implementation
+    try {
+        const response = await client.post<{ output: string; exitCode: number }>(
+            `/v1/projects/${appName}/exec`,
+            {
+                command,
+                workingDir: workingDir || '/app',
+            }
+        );
+        return response;
+    } catch (error: any) {
+        // If HTTP endpoint doesn't exist, return error with guidance
+        if (error.response?.status === 404) {
+            throw new Error(
+                'Command execution requires WebSocket support. ' +
+                'Please use the Liara CLI: `liara app shell --app <name> -- <command>` ' +
+                'or implement WebSocket support in the MCP server.'
+            );
+        }
+        throw error;
+    }
 }
 
 /**
