@@ -203,8 +203,9 @@ This will generate the correct configuration with absolute paths for your system
 - `liara_start_database` - Start a database
 - `liara_stop_database` - Stop a database
 - `liara_restart_database` - Restart a database
-- `liara_resize_database` - Change database plan
-- `liara_get_database_connection` - Get database connection info
+- `liara_get_database_connection` - Get database connection info (host, port, credentials). Tries multiple API endpoints to retrieve complete connection info including passwords. Returns warnings if password is not available.
+- `liara_reset_database_password` - Reset or update database password. If newPassword is not provided, generates a new random password.
+- `liara_update_database` - Update database settings (plan/resize or version)
 - `liara_create_backup` - Create a database backup
 - `liara_list_backups` - List database backups
 - `liara_get_backup_download_url` - Get backup download URL
@@ -324,6 +325,18 @@ Assistant: [Uses liara_create_database tool]
 
 User: Create a backup of my-db
 Assistant: [Uses liara_create_backup tool]
+```
+
+**Get database credentials:**
+```
+User: Get connection info for my-db
+Assistant: [Uses liara_get_database_connection tool]
+  Returns: host, port, username, password, connection string
+  Includes warnings if password is not available from API
+
+User: Reset the password for my-db
+Assistant: [Uses liara_reset_database_password tool]
+  Generates new password and returns it in the response
 ```
 
 **Manage storage:**

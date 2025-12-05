@@ -134,6 +134,8 @@ export interface DatabaseConnectionInfo {
     password: string;
     database: string;
     connectionString?: string;
+    passwordAvailable: boolean; // Indicates if password was successfully retrieved
+    warnings?: string[]; // Any warnings about missing or incomplete info
 }
 
 /**
@@ -151,11 +153,19 @@ interface DatabaseDetails {
     database?: string;
     name?: string;
     type: string;
+    connectionString?: string; // Some APIs return this directly
+    connection?: {
+        host?: string;
+        port?: number;
+        username?: string;
+        password?: string;
+        database?: string;
+    };
 }
 
 /**
  * Get database connection information (host, port, credentials)
- * The Liara API includes connection info directly in the database details response
+ * Tries multiple API endpoints and response structures to get complete connection info
  */
 export async function getDatabaseConnection(
     client: LiaraClient,
@@ -163,8 +173,60 @@ export async function getDatabaseConnection(
 ): Promise<DatabaseConnectionInfo> {
     validateRequired(databaseName, 'Database name');
     
-    // Fetch database details which includes connection info
-    const dbDetails = await client.get<DatabaseDetails>(`/v1/databases/${databaseName}`);
+    const warnings: string[] = [];
+    let dbDetails: DatabaseDetails | null = null;
+    
+    // Try primary endpoint: /v1/databases/{name}
+    try {
+        dbDetails = await client.get<DatabaseDetails>(`/v1/databases/${databaseName}`);
+    } catch (error: any) {
+        const { LiaraMcpError } = await import('../utils/errors.js');
+        throw new LiaraMcpError(
+            `Failed to fetch database details: ${error.message}`,
+            'DATABASE_FETCH_ERROR',
+            { databaseName, error: error.message },
+            [
+                'Verify the database name is correct',
+                'Check if the database exists',
+                'Ensure you have permission to access this database'
+            ]
+        );
+    }
+    
+    // Try alternative endpoint for connection info if primary doesn't have password
+    let connectionInfo: DatabaseDetails | null = null;
+    if (!dbDetails.password && !dbDetails.rootPassword && !dbDetails.connectionString) {
+        try {
+            // Some APIs have a separate connection endpoint
+            connectionInfo = await client.get<DatabaseDetails>(
+                `/v1/databases/${databaseName}/connection`
+            );
+        } catch (error: any) {
+            // This endpoint might not exist, that's okay
+            warnings.push('Connection-specific endpoint not available, using database details');
+        }
+    }
+    
+    // Merge connection info if available
+    if (connectionInfo) {
+        dbDetails = {
+            ...dbDetails,
+            ...connectionInfo,
+            connection: connectionInfo.connection || dbDetails.connection,
+        };
+    }
+    
+    // Extract connection info from nested connection object if present
+    if (dbDetails.connection) {
+        dbDetails = {
+            ...dbDetails,
+            hostname: dbDetails.connection.host || dbDetails.hostname,
+            port: dbDetails.connection.port || dbDetails.port,
+            username: dbDetails.connection.username || dbDetails.username,
+            password: dbDetails.connection.password || dbDetails.password,
+            database: dbDetails.connection.database || dbDetails.database,
+        };
+    }
     
     // Validate we have minimum required fields
     const host = dbDetails.hostname || dbDetails.host || dbDetails.internalHostname;
@@ -177,23 +239,66 @@ export async function getDatabaseConnection(
             [
                 'Verify the database exists and is accessible',
                 'Check if the database is running',
-                'Use liara_get_database to check database status'
+                'Use liara_get_database to check database status',
+                'The database may need to be started first'
             ]
         );
     }
     
-    // Extract connection info from the database details
-    // The API structure may include these in different fields based on database type
-    const connectionInfo: DatabaseConnectionInfo = {
+    // Extract password with better fallback logic
+    const password = dbDetails.password || 
+                    dbDetails.rootPassword || 
+                    (dbDetails.connection?.password) || 
+                    '';
+    
+    const passwordAvailable = !!password;
+    
+    if (!passwordAvailable) {
+        warnings.push(
+            'Password not returned by API. You may need to:',
+            '1. Check the dashboard connection tab for the password',
+            '2. Reset the password using liara_reset_database_password',
+            '3. Use the password that was shown when the database was created'
+        );
+    }
+    
+    // Extract username with better defaults based on database type
+    let username = dbDetails.username || 
+                  dbDetails.user || 
+                  (dbDetails.connection?.username);
+    
+    // Set default username based on database type if not provided
+    if (!username) {
+        switch (dbDetails.type) {
+            case 'postgres':
+                username = 'postgres';
+                break;
+            case 'redis':
+                username = 'default'; // Redis often doesn't use usernames
+                break;
+            default:
+                username = 'root';
+        }
+        warnings.push(`Username not provided, using default: ${username}`);
+    }
+    
+    // Build connection info
+    const connectionInfoResult: DatabaseConnectionInfo = {
         host,
         port: dbDetails.port || getDefaultPort(dbDetails.type),
-        username: dbDetails.username || dbDetails.user || 'root',
-        password: dbDetails.password || dbDetails.rootPassword || '',
+        username,
+        password,
         database: dbDetails.database || dbDetails.name || databaseName,
-        connectionString: buildConnectionString(dbDetails),
+        connectionString: dbDetails.connectionString || buildConnectionString({
+            ...dbDetails,
+            username,
+            password,
+        }),
+        passwordAvailable,
+        warnings: warnings.length > 0 ? warnings : undefined,
     };
     
-    return connectionInfo;
+    return connectionInfoResult;
 }
 
 /**
@@ -216,8 +321,8 @@ function getDefaultPort(dbType: string): number {
 /**
  * Build connection string based on database type
  */
-function buildConnectionString(db: DatabaseDetails): string | undefined {
-    if (!db.hostname && !db.host) return undefined;
+function buildConnectionString(db: DatabaseDetails & { username?: string; password?: string }): string | undefined {
+    if (!db.hostname && !db.host && !db.internalHostname) return undefined;
     
     const host = db.hostname || db.host || db.internalHostname;
     const port = db.port || getDefaultPort(db.type);
@@ -225,18 +330,91 @@ function buildConnectionString(db: DatabaseDetails): string | undefined {
     const pass = db.password || db.rootPassword || '';
     const dbName = db.database || db.name;
     
+    // URL encode password to handle special characters
+    const encodedPass = pass ? encodeURIComponent(pass) : '';
+    const encodedUser = user ? encodeURIComponent(user) : '';
+    
     switch (db.type) {
         case 'postgres':
-            return `postgresql://${user}:${pass}@${host}:${port}/${dbName}`;
+            if (!dbName) return undefined;
+            return encodedPass 
+                ? `postgresql://${encodedUser}:${encodedPass}@${host}:${port}/${dbName}`
+                : `postgresql://${encodedUser}@${host}:${port}/${dbName}`;
         case 'mysql':
         case 'mariadb':
-            return `mysql://${user}:${pass}@${host}:${port}/${dbName}`;
+            if (!dbName) return undefined;
+            return encodedPass 
+                ? `mysql://${encodedUser}:${encodedPass}@${host}:${port}/${dbName}`
+                : `mysql://${encodedUser}@${host}:${port}/${dbName}`;
         case 'mongodb':
-            return `mongodb://${user}:${pass}@${host}:${port}/${dbName}`;
+            if (!dbName) return undefined;
+            return encodedPass 
+                ? `mongodb://${encodedUser}:${encodedPass}@${host}:${port}/${dbName}`
+                : `mongodb://${encodedUser}@${host}:${port}/${dbName}`;
         case 'redis':
-            return pass ? `redis://:${pass}@${host}:${port}` : `redis://${host}:${port}`;
+            // Redis connection strings don't include database name in URL
+            return encodedPass 
+                ? `redis://:${encodedPass}@${host}:${port}`
+                : `redis://${host}:${port}`;
+        case 'mssql':
+            if (!dbName) return undefined;
+            return encodedPass 
+                ? `mssql://${encodedUser}:${encodedPass}@${host}:${port}/${dbName}`
+                : `mssql://${encodedUser}@${host}:${port}/${dbName}`;
+        case 'elasticsearch':
+            return encodedPass 
+                ? `https://${encodedUser}:${encodedPass}@${host}:${port}`
+                : `http://${host}:${port}`;
+        case 'rabbitmq':
+            return encodedPass 
+                ? `amqp://${encodedUser}:${encodedPass}@${host}:${port}`
+                : `amqp://${encodedUser}@${host}:${port}`;
         default:
             return undefined;
+    }
+}
+
+/**
+ * Reset/update database password
+ * Note: This may not be available for all database types or may require specific permissions
+ */
+export async function resetDatabasePassword(
+    client: LiaraClient,
+    databaseName: string,
+    newPassword?: string
+): Promise<{ message: string; password?: string }> {
+    validateRequired(databaseName, 'Database name');
+    
+    try {
+        // Try password reset endpoint
+        const response = await client.post<{ message: string; password?: string }>(
+            `/v1/databases/${databaseName}/reset-password`,
+            newPassword ? { password: newPassword } : {}
+        );
+        return response;
+    } catch (error: any) {
+        // Try alternative endpoint format
+        try {
+            const response = await client.post<{ message: string; password?: string }>(
+                `/v1/databases/${databaseName}/actions/reset-password`,
+                newPassword ? { password: newPassword } : {}
+            );
+            return response;
+        } catch (altError: any) {
+            const { LiaraMcpError } = await import('../utils/errors.js');
+            throw new LiaraMcpError(
+                `Failed to reset database password: ${altError.message || error.message}`,
+                'PASSWORD_RESET_ERROR',
+                { databaseName, error: altError.message || error.message },
+                [
+                    'Verify the database exists and is running',
+                    'Check if password reset is supported for this database type',
+                    'Ensure you have permission to reset database passwords',
+                    'Some database types may not support password reset via API',
+                    'Try resetting the password from the Liara dashboard'
+                ]
+            );
+        }
     }
 }
 
@@ -293,4 +471,29 @@ export function getAvailableDatabaseTypes(): DatabaseType[] {
         'elasticsearch',
         'rabbitmq',
     ];
+}
+
+/**
+ * Update database settings (like version, plan, etc.)
+ */
+export async function updateDatabase(
+    client: LiaraClient,
+    databaseName: string,
+    updates: {
+        planID?: string;
+        version?: string;
+    }
+): Promise<Database> {
+    validateRequired(databaseName, 'Database name');
+    
+    if (!updates.planID && !updates.version) {
+        const { LiaraMcpError } = await import('../utils/errors.js');
+        throw new LiaraMcpError(
+            'At least one update field (planID or version) is required',
+            'INVALID_UPDATE_REQUEST',
+            { databaseName, updates }
+        );
+    }
+    
+    return await client.put<Database>(`/v1/databases/${databaseName}`, updates);
 }

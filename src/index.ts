@@ -582,7 +582,7 @@ class LiaraMcpServer {
                 },
                 {
                     name: 'liara_get_database_connection',
-                    description: 'Get database connection information (host, port, credentials)',
+                    description: 'Get database connection information (host, port, credentials). Tries multiple API endpoints to retrieve complete connection info including passwords. Returns warnings if password is not available.',
                     inputSchema: {
                         type: 'object',
                         properties: {
@@ -592,6 +592,46 @@ class LiaraMcpServer {
                             },
                         },
                         required: ['databaseName'],
+                    },
+                },
+                {
+                    name: 'liara_reset_database_password',
+                    description: 'Reset or update database password. If newPassword is not provided, generates a new random password. Returns the new password in the response.',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            databaseName: {
+                                type: 'string',
+                                description: 'The name of the database',
+                            },
+                            newPassword: {
+                                type: 'string',
+                                description: 'Optional: New password to set. If not provided, a random password will be generated.',
+                            },
+                        },
+                        required: ['databaseName'],
+                    },
+                },
+                {
+                    name: 'liara_update_database',
+                    description: 'Update database settings such as plan (resize) or version',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            name: {
+                                type: 'string',
+                                description: 'The name of the database',
+                            },
+                            planID: {
+                                type: 'string',
+                                description: 'New plan ID to resize the database',
+                            },
+                            version: {
+                                type: 'string',
+                                description: 'New database version',
+                            },
+                        },
+                        required: ['name'],
                     },
                 },
                 {
@@ -661,24 +701,6 @@ class LiaraMcpServer {
                             },
                         },
                         required: ['name'],
-                    },
-                },
-                {
-                    name: 'liara_resize_database',
-                    description: 'Change database plan (resize resources)',
-                    inputSchema: {
-                        type: 'object',
-                        properties: {
-                            name: {
-                                type: 'string',
-                                description: 'The name of the database',
-                            },
-                            planID: {
-                                type: 'string',
-                                description: 'New plan ID',
-                            },
-                        },
-                        required: ['name', 'planID'],
                     },
                 },
                 {
@@ -1440,20 +1462,6 @@ class LiaraMcpServer {
                         required: ['vmId'],
                     },
                 },
-                {
-                    name: 'liara_delete_vm',
-                    inputSchema: {
-                        type: 'object',
-                        properties: {
-                            vmId: {
-                                type: 'string',
-                                description: 'The VM ID',
-                            },
-                        },
-                        required: ['vmId'],
-                    },
-                },
-
                 {
                     name: 'liara_delete_vm',
                     description: 'Delete a virtual machine',
@@ -2268,11 +2276,67 @@ class LiaraMcpServer {
                             this.client,
                             args!.databaseName as string
                         );
+                        
+                        // Format response with clear indication of password availability
+                        let responseText = JSON.stringify(connection, null, 2);
+                        
+                        if (!connection.passwordAvailable) {
+                            responseText += '\n\n⚠️  WARNING: Password not available in API response.\n';
+                            if (connection.warnings) {
+                                responseText += connection.warnings.join('\n') + '\n';
+                            }
+                        }
+                        
                         return {
                             content: [
                                 {
                                     type: 'text',
-                                    text: JSON.stringify(connection, null, 2),
+                                    text: responseText,
+                                },
+                            ],
+                        };
+                    }
+
+                    case 'liara_reset_database_password': {
+                        const result = await dbService.resetDatabasePassword(
+                            this.client,
+                            args!.databaseName as string,
+                            args!.newPassword as string | undefined
+                        );
+                        
+                        let responseText = `Password reset successfully for database "${args!.databaseName}".\n`;
+                        if (result.password) {
+                            responseText += `\n🔑 New Password: ${result.password}\n`;
+                            responseText += '\n⚠️  IMPORTANT: Save this password immediately. It will not be shown again.\n';
+                        }
+                        if (result.message) {
+                            responseText += `\nMessage: ${result.message}\n`;
+                        }
+                        
+                        return {
+                            content: [
+                                {
+                                    type: 'text',
+                                    text: responseText + '\n' + JSON.stringify(result, null, 2),
+                                },
+                            ],
+                        };
+                    }
+
+                    case 'liara_update_database': {
+                        const database = await dbService.updateDatabase(
+                            this.client,
+                            args!.name as string,
+                            {
+                                planID: args!.planID as string | undefined,
+                                version: args!.version as string | undefined,
+                            }
+                        );
+                        return {
+                            content: [
+                                {
+                                    type: 'text',
+                                    text: `Database "${args!.name}" updated successfully.\n${JSON.stringify(database, null, 2)}`,
                                 },
                             ],
                         };
