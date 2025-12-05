@@ -86,7 +86,7 @@ export interface CreateProjectRequest {
     platform: Platform;
     planID: string;
     region?: string;
-    network: string;
+    network?: string;
 }
 
 export interface ProjectDetails extends Project {

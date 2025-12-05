@@ -42,7 +42,8 @@ export async function createApp(
     validateAppName(request.name);
     validateRequired(request.platform, 'Platform');
     validateRequired(request.planID, 'Plan ID');
-    validateRequired(request.network, 'Network ID');
+    // Network is optional in schema but will be passed to API if provided
+    // API will return error if network is required but not provided
 
     return await client.post<Project>('/v1/projects', request);
 }
