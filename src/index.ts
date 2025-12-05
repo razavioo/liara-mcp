@@ -12,7 +12,7 @@ import {
     McpError,
 } from '@modelcontextprotocol/sdk/types.js';
 import { createLiaraClient } from './api/client.js';
-import { formatErrorForMcp } from './utils/errors.js';
+import { formatErrorForMcp, LiaraMcpError } from './utils/errors.js';
 import { PaginationOptions, CreateProjectRequest } from './api/types.js';
 import * as appService from './services/apps.js';
 import * as envService from './services/environment.js';
@@ -101,7 +101,7 @@ class LiaraMcpServer {
     /**
      * Extract pagination options from tool arguments
      */
-    private extractPagination(args: Record<string, unknown> | undefined): PaginationOptions | undefined {
+    private extractPagination(args: any): PaginationOptions | undefined {
         if (args?.page || args?.perPage || args?.limit || args?.offset) {
             return {
                 page: args.page as number | undefined,
@@ -158,17 +158,9 @@ class LiaraMcpServer {
                                 type: 'string',
                                 description: 'Plan ID for the app',
                             },
-                            bundlePlanID: {
-                                type: 'string',
-                                description: 'Bundle plan ID (optional, but may be required by the API)',
-                            },
                             region: {
                                 type: 'string',
                                 description: 'Deployment region (optional)',
-                            },
-                            network: {
-                                type: 'string',
-                                description: 'Network ID (optional, but required by Liara API in some cases)',
                             },
                         },
                         required: ['name', 'platform', 'planID'],
@@ -248,46 +240,11 @@ class LiaraMcpServer {
                         required: ['name', 'planID'],
                     },
                 },
-                {
-                    name: 'liara_exec_command',
-                    description: `Execute a command in the app container (e.g., database migrations, initialization scripts).
-
-Examples:
-- Run migration: {appName: "my-app", command: "python manage.py migrate"}
-- Initialize DB: {appName: "my-app", command: "python -m src.admin.scripts.init_db"}
-- Check status: {appName: "my-app", command: "ps aux"}
-
-Note: This may require WebSocket support. If HTTP endpoint is not available, the tool will suggest using the Liara CLI.`,
-                    inputSchema: {
-                        type: 'object',
-                        properties: {
-                            appName: {
-                                type: 'string',
-                                description: 'The name of the app',
-                            },
-                            command: {
-                                type: 'string',
-                                description: 'Command to execute (e.g., "python -m src.admin.scripts.init_db")',
-                            },
-                            workingDir: {
-                                type: 'string',
-                                description: 'Working directory for the command (optional)',
-                            },
-                        },
-                        required: ['appName', 'command'],
-                    },
-                },
 
                 // Environment Variable Tools
                 {
                     name: 'liara_set_env_vars',
-                    description: `Set or update environment variables for an app (can set single or multiple).
-
-Examples:
-- Single variable: {appName: "my-app", variables: [{key: "NODE_ENV", value: "production"}]}
-- Multiple variables: {appName: "my-app", variables: [{key: "DATABASE_URL", value: "postgres://..."}, {key: "API_KEY", value: "secret"}]}
-
-Note: Setting variables will replace existing ones unless you merge them manually.`,
+                    description: 'Set or update environment variables for an app',
                     inputSchema: {
                         type: 'object',
                         properties: {
@@ -297,7 +254,7 @@ Note: Setting variables will replace existing ones unless you merge them manuall
                             },
                             variables: {
                                 type: 'array',
-                                description: 'Array of environment variables (use single-item array for one variable)',
+                                description: 'Array of environment variables',
                                 items: {
                                     type: 'object',
                                     properties: {
@@ -315,6 +272,28 @@ Note: Setting variables will replace existing ones unless you merge them manuall
                             },
                         },
                         required: ['appName', 'variables'],
+                    },
+                },
+                {
+                    name: 'liara_set_env_var',
+                    description: 'Set a single environment variable for an app',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            appName: {
+                                type: 'string',
+                                description: 'The name of the app',
+                            },
+                            key: {
+                                type: 'string',
+                                description: 'Variable name (uppercase, alphanumeric with underscores)',
+                            },
+                            value: {
+                                type: 'string',
+                                description: 'Variable value',
+                            },
+                        },
+                        required: ['appName', 'key', 'value'],
                     },
                 },
                 {
@@ -351,7 +330,7 @@ Note: Setting variables will replace existing ones unless you merge them manuall
                 },
                 {
                     name: 'liara_delete_env_vars',
-                    description: 'Delete/unset environment variables for an app (can delete single or multiple)',
+                    description: 'Delete/unset multiple environment variables for an app',
                     inputSchema: {
                         type: 'object',
                         properties: {
@@ -361,7 +340,7 @@ Note: Setting variables will replace existing ones unless you merge them manuall
                             },
                             keys: {
                                 type: 'array',
-                                description: 'Array of variable names to delete (use single-item array for one variable)',
+                                description: 'Array of variable names to delete',
                                 items: {
                                     type: 'string',
                                 },
@@ -1463,6 +1442,20 @@ Note: Setting variables will replace existing ones unless you merge them manuall
                 },
                 {
                     name: 'liara_delete_vm',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            vmId: {
+                                type: 'string',
+                                description: 'The VM ID',
+                            },
+                        },
+                        required: ['vmId'],
+                    },
+                },
+
+                {
+                    name: 'liara_delete_vm',
                     description: 'Delete a virtual machine',
                     inputSchema: {
                         type: 'object',
@@ -1969,22 +1962,6 @@ Note: Setting variables will replace existing ones unless you merge them manuall
                         };
                     }
 
-                    case 'liara_scale_app': {
-                        await appService.scaleApp(
-                            this.client,
-                            args!.name as string,
-                            args!.replicas as number
-                        );
-                        return {
-                            content: [
-                                {
-                                    type: 'text',
-                                    text: `App "${args!.name}" scaled to ${args!.replicas} replica(s) successfully.`,
-                                },
-                            ],
-                        };
-                    }
-
                     case 'liara_resize_app': {
                         await appService.resizeApp(
                             this.client,
@@ -1999,52 +1976,6 @@ Note: Setting variables will replace existing ones unless you merge them manuall
                                 },
                             ],
                         };
-                    }
-
-                    case 'liara_exec_command': {
-                        try {
-                            const result = await appService.execCommand(
-                                this.client,
-                                args!.appName as string,
-                                args!.command as string,
-                                args!.workingDir as string | undefined
-                            );
-                            return {
-                                content: [
-                                    {
-                                        type: 'text',
-                                        text: JSON.stringify({
-                                            success: true,
-                                            data: result,
-                                            message: 'Command executed successfully'
-                                        }, null, 2),
-                                    },
-                                ],
-                            };
-                        } catch (error: unknown) {
-                            const errorMessage = formatErrorForMcp(error);
-                            const err = error as { code?: string; suggestions?: string[] };
-                            
-                            return {
-                                content: [
-                                    {
-                                        type: 'text',
-                                        text: JSON.stringify({
-                                            success: false,
-                                            error: {
-                                                code: err.code || 'EXEC_COMMAND_ERROR',
-                                                message: errorMessage,
-                                                suggestions: err.suggestions || [
-                                                    'Command execution may require WebSocket support',
-                                                    'Consider using the Liara CLI: liara app shell --app ' + (args!.appName as string) + ' -- ' + (args!.command as string)
-                                                ]
-                                            }
-                                        }, null, 2),
-                                    },
-                                ],
-                                isError: true,
-                            };
-                        }
                     }
 
                     // Environment Variables
@@ -2064,6 +1995,23 @@ Note: Setting variables will replace existing ones unless you merge them manuall
                         };
                     }
 
+                    case 'liara_set_env_var': {
+                        const result = await envService.setEnvVar(
+                            this.client,
+                            args!.appName as string,
+                            args!.key as string,
+                            args!.value as string
+                        );
+                        return {
+                            content: [
+                                {
+                                    type: 'text',
+                                    text: result.message || `Environment variable ${args!.key} set successfully.`,
+                                },
+                            ],
+                        };
+                    }
+
                     case 'liara_get_env_vars': {
                         const envVars = await envService.getEnvVars(this.client, args!.appName as string);
                         return {
@@ -2071,6 +2019,22 @@ Note: Setting variables will replace existing ones unless you merge them manuall
                                 {
                                     type: 'text',
                                     text: JSON.stringify(envVars, null, 2),
+                                },
+                            ],
+                        };
+                    }
+
+                    case 'liara_delete_env_var': {
+                        const result = await envService.deleteEnvVar(
+                            this.client,
+                            args!.appName as string,
+                            args!.key as string
+                        );
+                        return {
+                            content: [
+                                {
+                                    type: 'text',
+                                    text: result.message || `Environment variable ${args!.key} deleted successfully.`,
                                 },
                             ],
                         };
@@ -2308,11 +2272,7 @@ Note: Setting variables will replace existing ones unless you merge them manuall
                             content: [
                                 {
                                     type: 'text',
-                                    text: JSON.stringify({
-                                        success: true,
-                                        data: connection,
-                                        message: `Database connection info for "${args!.databaseName}" retrieved successfully`
-                                    }, null, 2),
+                                    text: JSON.stringify(connection, null, 2),
                                 },
                             ],
                         };
@@ -3378,8 +3338,16 @@ Note: Setting variables will replace existing ones unless you merge them manuall
                         );
                 }
             } catch (error) {
+                // Extract base message (without suggestions) and suggestions separately
+                // to avoid duplication in the response
                 const errorMessage = formatErrorForMcp(error);
-                const err = error as { code?: string; suggestions?: string[] };
+                const suggestions = (error instanceof LiaraMcpError && error.suggestions) 
+                    ? error.suggestions 
+                    : undefined;
+                const errorCode = (error instanceof LiaraMcpError && error.code) 
+                    ? error.code 
+                    : 'UNKNOWN_ERROR';
+                
                 return {
                     content: [
                         {
@@ -3387,9 +3355,9 @@ Note: Setting variables will replace existing ones unless you merge them manuall
                             text: JSON.stringify({
                                 success: false,
                                 error: {
-                                    code: err.code || 'UNKNOWN_ERROR',
+                                    code: errorCode,
                                     message: errorMessage,
-                                    suggestions: err.suggestions
+                                    ...(suggestions && { suggestions })
                                 }
                             }, null, 2),
                         },
