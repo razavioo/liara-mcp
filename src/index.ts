@@ -101,7 +101,7 @@ class LiaraMcpServer {
     /**
      * Extract pagination options from tool arguments
      */
-    private extractPagination(args: any): PaginationOptions | undefined {
+    private extractPagination(args: Record<string, unknown> | undefined): PaginationOptions | undefined {
         if (args?.page || args?.perPage || args?.limit || args?.offset) {
             return {
                 page: args.page as number | undefined,
@@ -250,7 +250,14 @@ class LiaraMcpServer {
                 },
                 {
                     name: 'liara_exec_command',
-                    description: 'Execute a command in the app container (e.g., database migrations, initialization scripts). Note: This requires WebSocket support and may not work in all environments.',
+                    description: `Execute a command in the app container (e.g., database migrations, initialization scripts).
+
+Examples:
+- Run migration: {appName: "my-app", command: "python manage.py migrate"}
+- Initialize DB: {appName: "my-app", command: "python -m src.admin.scripts.init_db"}
+- Check status: {appName: "my-app", command: "ps aux"}
+
+Note: This may require WebSocket support. If HTTP endpoint is not available, the tool will suggest using the Liara CLI.`,
                     inputSchema: {
                         type: 'object',
                         properties: {
@@ -274,7 +281,13 @@ class LiaraMcpServer {
                 // Environment Variable Tools
                 {
                     name: 'liara_set_env_vars',
-                    description: 'Set or update environment variables for an app (can set single or multiple)',
+                    description: `Set or update environment variables for an app (can set single or multiple).
+
+Examples:
+- Single variable: {appName: "my-app", variables: [{key: "NODE_ENV", value: "production"}]}
+- Multiple variables: {appName: "my-app", variables: [{key: "DATABASE_URL", value: "postgres://..."}, {key: "API_KEY", value: "secret"}]}
+
+Note: Setting variables will replace existing ones unless you merge them manually.`,
                     inputSchema: {
                         type: 'object',
                         properties: {
@@ -2000,12 +2013,26 @@ class LiaraMcpServer {
                                     },
                                 ],
                             };
-                        } catch (error: any) {
+                        } catch (error: unknown) {
+                            const err = error as Error;
+                            const errorMessage = err instanceof Error ? err.message : String(error);
+                            const suggestions = (err as { suggestions?: string[] }).suggestions;
+                            
+                            let message = `Error executing command: ${errorMessage}`;
+                            if (suggestions && suggestions.length > 0) {
+                                message += '\n\nSuggestions:';
+                                suggestions.forEach((suggestion, index) => {
+                                    message += `\n${index + 1}. ${suggestion}`;
+                                });
+                            } else {
+                                message += '\n\nNote: Command execution may require WebSocket support. Consider using the Liara CLI: liara app shell --app ' + (args!.appName as string) + ' -- ' + (args!.command as string);
+                            }
+                            
                             return {
                                 content: [
                                     {
                                         type: 'text',
-                                        text: `Error executing command: ${error.message}\n\nNote: Command execution may require WebSocket support. Consider using the Liara CLI: liara app shell --app ${args!.appName} -- ${args!.command}`,
+                                        text: message,
                                     },
                                 ],
                                 isError: true,

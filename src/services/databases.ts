@@ -137,6 +137,23 @@ export interface DatabaseConnectionInfo {
 }
 
 /**
+ * Database details structure from Liara API
+ */
+interface DatabaseDetails {
+    hostname?: string;
+    host?: string;
+    internalHostname?: string;
+    port?: number;
+    username?: string;
+    user?: string;
+    password?: string;
+    rootPassword?: string;
+    database?: string;
+    name?: string;
+    type: string;
+}
+
+/**
  * Get database connection information (host, port, credentials)
  * The Liara API includes connection info directly in the database details response
  */
@@ -147,12 +164,28 @@ export async function getDatabaseConnection(
     validateRequired(databaseName, 'Database name');
     
     // Fetch database details which includes connection info
-    const dbDetails = await client.get<any>(`/v1/databases/${databaseName}`);
+    const dbDetails = await client.get<DatabaseDetails>(`/v1/databases/${databaseName}`);
+    
+    // Validate we have minimum required fields
+    const host = dbDetails.hostname || dbDetails.host || dbDetails.internalHostname;
+    if (!host) {
+        const { LiaraMcpError } = await import('../utils/errors.js');
+        throw new LiaraMcpError(
+            'Database connection info missing host',
+            'INCOMPLETE_CONNECTION_INFO',
+            { databaseName, dbDetails },
+            [
+                'Verify the database exists and is accessible',
+                'Check if the database is running',
+                'Use liara_get_database to check database status'
+            ]
+        );
+    }
     
     // Extract connection info from the database details
     // The API structure may include these in different fields based on database type
     const connectionInfo: DatabaseConnectionInfo = {
-        host: dbDetails.hostname || dbDetails.host || dbDetails.internalHostname || '',
+        host,
         port: dbDetails.port || getDefaultPort(dbDetails.type),
         username: dbDetails.username || dbDetails.user || 'root',
         password: dbDetails.password || dbDetails.rootPassword || '',
@@ -183,7 +216,7 @@ function getDefaultPort(dbType: string): number {
 /**
  * Build connection string based on database type
  */
-function buildConnectionString(db: any): string | undefined {
+function buildConnectionString(db: DatabaseDetails): string | undefined {
     if (!db.hostname && !db.host) return undefined;
     
     const host = db.hostname || db.host || db.internalHostname;

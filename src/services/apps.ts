@@ -29,7 +29,25 @@ export async function getApp(
     name: string
 ): Promise<ProjectDetails> {
     validateAppName(name);
-    return await client.get<ProjectDetails>(`/v1/projects/${name}`);
+    try {
+        return await client.get<ProjectDetails>(`/v1/projects/${name}`);
+    } catch (error: unknown) {
+        const err = error as { statusCode?: number; message?: string };
+        if (err.statusCode === 404) {
+            const { LiaraMcpError } = await import('../utils/errors.js');
+            throw new LiaraMcpError(
+                `App "${name}" not found`,
+                'APP_NOT_FOUND',
+                { name },
+                [
+                    'Check if the app name is correct',
+                    'Use liara_list_apps to see all available apps',
+                    'Verify you have access to this app'
+                ]
+            );
+        }
+        throw error;
+    }
 }
 
 /**
@@ -146,13 +164,20 @@ export async function execCommand(
             }
         );
         return response;
-    } catch (error: any) {
+    } catch (error: unknown) {
+        const err = error as { response?: { status?: number }; message?: string };
         // If HTTP endpoint doesn't exist, return error with guidance
-        if (error.response?.status === 404) {
-            throw new Error(
-                'Command execution requires WebSocket support. ' +
-                'Please use the Liara CLI: `liara app shell --app <name> -- <command>` ' +
-                'or implement WebSocket support in the MCP server.'
+        if (err.response?.status === 404) {
+            const { LiaraMcpError } = await import('../utils/errors.js');
+            throw new LiaraMcpError(
+                'Command execution requires WebSocket support',
+                'EXEC_COMMAND_NOT_AVAILABLE',
+                { appName, command },
+                [
+                    'Use the Liara CLI: liara app shell --app <name> -- <command>',
+                    'Or implement WebSocket support in the MCP server',
+                    'Check if the app is running and accessible'
+                ]
             );
         }
         throw error;

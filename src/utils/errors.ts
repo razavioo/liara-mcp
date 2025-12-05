@@ -5,10 +5,25 @@ export class LiaraMcpError extends Error {
     constructor(
         message: string,
         public code?: string,
-        public details?: any
+        public details?: any,
+        public suggestions?: string[]
     ) {
         super(message);
         this.name = 'LiaraMcpError';
+    }
+
+    /**
+     * Format error message with suggestions
+     */
+    formatMessage(): string {
+        let msg = this.message;
+        if (this.suggestions && this.suggestions.length > 0) {
+            msg += '\n\nSuggestions:';
+            this.suggestions.forEach((suggestion, index) => {
+                msg += `\n${index + 1}. ${suggestion}`;
+            });
+        }
+        return msg;
     }
 }
 
@@ -38,14 +53,41 @@ export function validateRequired(value: any, fieldName: string): void {
 export function validateAppName(name: string): void {
     validateRequired(name, 'App name');
 
-    if (!/^[a-z0-9-]{3,32}$/.test(name)) {
+    if (name.length < 3) {
         throw new LiaraMcpError(
-            'App name must be 3-32 characters long and contain only lowercase letters, numbers, and hyphens'
+            `App name "${name}" is too short (minimum 3 characters, got ${name.length})`,
+            'INVALID_APP_NAME',
+            { name, length: name.length },
+            ['Use a name like "my-app" or "api-service"']
+        );
+    }
+
+    if (name.length > 32) {
+        throw new LiaraMcpError(
+            `App name "${name}" is too long (maximum 32 characters, got ${name.length})`,
+            'INVALID_APP_NAME',
+            { name, length: name.length },
+            ['Shorten the name to 32 characters or less']
+        );
+    }
+
+    if (!/^[a-z0-9-]+$/.test(name)) {
+        const invalidChars = name.match(/[^a-z0-9-]/g);
+        throw new LiaraMcpError(
+            `App name contains invalid characters: ${invalidChars?.join(', ') || 'unknown'}`,
+            'INVALID_APP_NAME',
+            { name, invalidChars },
+            ['Use only lowercase letters, numbers, and hyphens', 'Example: "my-app" or "api-service"']
         );
     }
 
     if (name.startsWith('-') || name.endsWith('-')) {
-        throw new LiaraMcpError('App name cannot start or end with a hyphen');
+        throw new LiaraMcpError(
+            `App name cannot start or end with a hyphen: "${name}"`,
+            'INVALID_APP_NAME',
+            { name },
+            ['Remove leading/trailing hyphens', 'Example: "my-app" instead of "-my-app"']
+        );
     }
 }
 

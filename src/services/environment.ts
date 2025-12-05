@@ -50,14 +50,36 @@ export async function getEnvVars(
     appName: string
 ): Promise<EnvironmentVariable[]> {
     validateAppName(appName);
-    const project = await client.get<any>(`/v1/projects/${appName}`);
-    // API returns 'envs' array in project object
-    const envs = project.envs || project.envVars || project.project?.envs || [];
-    // Map to EnvironmentVariable format (extract key and value)
-    return envs.map((env: any) => ({
-        key: env.key || env.name,
-        value: env.value || '',
-    }));
+    try {
+        const project = await client.get<{
+            envs?: Array<{ key?: string; name?: string; value?: string }>;
+            envVars?: Array<{ key?: string; name?: string; value?: string }>;
+            project?: { envs?: Array<{ key?: string; name?: string; value?: string }> };
+        }>(`/v1/projects/${appName}`);
+        // API returns 'envs' array in project object
+        const envs = project.envs || project.envVars || project.project?.envs || [];
+        // Map to EnvironmentVariable format (extract key and value)
+        return envs.map((env) => ({
+            key: env.key || env.name || '',
+            value: env.value || '',
+        }));
+    } catch (error: unknown) {
+        const err = error as { statusCode?: number };
+        if (err.statusCode === 404) {
+            const { LiaraMcpError } = await import('../utils/errors.js');
+            throw new LiaraMcpError(
+                `App "${appName}" not found`,
+                'APP_NOT_FOUND',
+                { appName },
+                [
+                    'Check if the app name is correct',
+                    'Use liara_list_apps to see all available apps',
+                    'Verify you have access to this app'
+                ]
+            );
+        }
+        throw error;
+    }
 }
 
 /**

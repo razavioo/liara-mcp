@@ -62,10 +62,11 @@ export class LiaraClient {
     ): Promise<T> {
         try {
             return await requestFn();
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const err = error as { statusCode?: number; response?: { status?: number } };
             // Retry on rate limiting (429) or server errors (5xx)
-            const statusCode = error.statusCode || error.response?.status;
-            const isRetryable = statusCode === 429 || (statusCode >= 500 && statusCode < 600);
+            const statusCode = err.statusCode || err.response?.status;
+            const isRetryable = statusCode === 429 || (statusCode !== undefined && statusCode >= 500 && statusCode < 600);
             
             if (isRetryable && retryCount < this.maxRetries) {
                 // Exponential backoff: 1s, 2s, 4s...
@@ -125,7 +126,7 @@ export class LiaraClient {
     /**
      * Add team ID parameter to request if configured
      */
-    private addTeamId(params: any = {}): any {
+    private addTeamId(params: Record<string, unknown> = {}): Record<string, unknown> {
         if (this.teamId) {
             return { ...params, teamID: this.teamId };
         }
@@ -135,10 +136,10 @@ export class LiaraClient {
     /**
      * GET request with automatic retry for rate limiting
      */
-    async get<T>(url: string, params?: any): Promise<T> {
+    async get<T>(url: string, params?: Record<string, string | number | boolean>): Promise<T> {
         return this.executeWithRetry(async () => {
             const response = await this.client.get<T>(url, {
-                params: this.addTeamId(params)
+                params: this.addTeamId(params) as Record<string, string | number | boolean>
             });
             return response.data;
         });
@@ -147,10 +148,10 @@ export class LiaraClient {
     /**
      * POST request with automatic retry for rate limiting
      */
-    async post<T>(url: string, data?: any, params?: any): Promise<T> {
+    async post<T>(url: string, data?: unknown, params?: Record<string, string | number | boolean>): Promise<T> {
         return this.executeWithRetry(async () => {
             const response = await this.client.post<T>(url, data, {
-                params: this.addTeamId(params)
+                params: this.addTeamId(params) as Record<string, string | number | boolean>
             });
             return response.data;
         });
@@ -159,10 +160,10 @@ export class LiaraClient {
     /**
      * PUT request with automatic retry for rate limiting
      */
-    async put<T>(url: string, data?: any, params?: any): Promise<T> {
+    async put<T>(url: string, data?: unknown, params?: Record<string, string | number | boolean>): Promise<T> {
         return this.executeWithRetry(async () => {
             const response = await this.client.put<T>(url, data, {
-                params: this.addTeamId(params)
+                params: this.addTeamId(params) as Record<string, string | number | boolean>
             });
             return response.data;
         });
@@ -171,10 +172,10 @@ export class LiaraClient {
     /**
      * DELETE request with automatic retry for rate limiting
      */
-    async delete<T>(url: string, params?: any): Promise<T> {
+    async delete<T>(url: string, params?: Record<string, string | number | boolean>): Promise<T> {
         return this.executeWithRetry(async () => {
             const response = await this.client.delete<T>(url, {
-                params: this.addTeamId(params)
+                params: this.addTeamId(params) as Record<string, string | number | boolean>
             });
             return response.data;
         });
@@ -183,7 +184,7 @@ export class LiaraClient {
     /**
      * POST multipart/form-data request with automatic retry for rate limiting
      */
-    async postFormData<T>(url: string, formData: any, params?: any): Promise<T> {
+    async postFormData<T>(url: string, formData: { getHeaders?: () => Record<string, string> }, params?: Record<string, string | number | boolean>): Promise<T> {
         return this.executeWithRetry(async () => {
             // form-data sets its own Content-Type with boundary, so we use its headers
             const headers = formData.getHeaders ? formData.getHeaders() : {

@@ -181,11 +181,9 @@ This will generate the correct configuration with absolute paths for your system
 - `liara_resize_app` - Change app plan
 
 #### Environment Variables
-- `liara_set_env_vars` - Set multiple environment variables
-- `liara_set_env_var` - Set a single environment variable
+- `liara_set_env_vars` - Set environment variables (single or multiple)
 - `liara_get_env_vars` - Get all environment variables
-- `liara_delete_env_var` - Delete an environment variable
-- `liara_delete_env_vars` - Delete multiple environment variables
+- `liara_delete_env_vars` - Delete environment variables (single or multiple)
 
 #### Deployment
 - `liara_upload_source` - Upload source code for deployment
