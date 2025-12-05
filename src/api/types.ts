@@ -85,6 +85,7 @@ export interface CreateProjectRequest {
     name: string;
     platform: Platform;
     planID: string;
+    bundlePlanID?: string;
     region?: string;
     network?: string;
 }

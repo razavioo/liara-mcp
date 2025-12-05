@@ -42,7 +42,7 @@ class LiaraMcpServer {
         this.server = new Server(
             {
                 name: 'liara-mcp',
-                version: '0.2.8',
+                version: '0.2.9',
             },
             {
                 capabilities: {
@@ -157,6 +157,10 @@ class LiaraMcpServer {
                             planID: {
                                 type: 'string',
                                 description: 'Plan ID for the app',
+                            },
+                            bundlePlanID: {
+                                type: 'string',
+                                description: 'Bundle plan ID (optional, but may be required by the API)',
                             },
                             region: {
                                 type: 'string',
