@@ -8,6 +8,38 @@ import {
 import { validateRequired, unwrapApiResponse } from '../utils/errors.js';
 
 /**
+ * Resolve database name/hostname to ID
+ * If the input looks like a MongoDB ObjectID (24 hex chars), use it directly.
+ * Otherwise, try to find a database with matching hostname.
+ */
+async function resolveDatabaseId(client: LiaraClient, nameOrId: string): Promise<string> {
+    // Check if it's already a MongoDB ObjectID (24 hex characters)
+    if (/^[a-f0-9]{24}$/i.test(nameOrId)) {
+        return nameOrId;
+    }
+
+    // Otherwise, search for database by hostname
+    const databases = await listDatabases(client);
+    const db = databases.find(d => d.hostname === nameOrId || d.id === nameOrId || d._id === nameOrId);
+
+    if (!db) {
+        const { LiaraMcpError } = await import('../utils/errors.js');
+        throw new LiaraMcpError(
+            `Database not found: ${nameOrId}`,
+            'DATABASE_NOT_FOUND',
+            { nameOrId },
+            [
+                'Use liara_list_databases to see available databases',
+                'Provide either the database hostname or ID',
+                'Database names are case-sensitive'
+            ]
+        );
+    }
+
+    return db.id || db._id;
+}
+
+/**
  * List all databases
  */
 export async function listDatabases(client: LiaraClient): Promise<Database[]> {
@@ -23,7 +55,8 @@ export async function getDatabase(
     name: string
 ): Promise<Database> {
     validateRequired(name, 'Database name');
-    return await client.get<Database>(`/v1/databases/${name}`);
+    const dbId = await resolveDatabaseId(client, name);
+    return await client.get<Database>(`/v1/databases/${dbId}`);
 }
 
 /**
@@ -48,7 +81,8 @@ export async function deleteDatabase(
     name: string
 ): Promise<void> {
     validateRequired(name, 'Database name');
-    await client.delete(`/v1/databases/${name}`);
+    const dbId = await resolveDatabaseId(client, name);
+    await client.delete(`/v1/databases/${dbId}`);
 }
 
 /**
@@ -59,7 +93,8 @@ export async function startDatabase(
     name: string
 ): Promise<void> {
     validateRequired(name, 'Database name');
-    await client.post(`/v1/databases/${name}/actions/start`);
+    const dbId = await resolveDatabaseId(client, name);
+    await client.post(`/v1/databases/${dbId}/actions/start`);
 }
 
 /**
@@ -70,7 +105,8 @@ export async function stopDatabase(
     name: string
 ): Promise<void> {
     validateRequired(name, 'Database name');
-    await client.post(`/v1/databases/${name}/actions/stop`);
+    const dbId = await resolveDatabaseId(client, name);
+    await client.post(`/v1/databases/${dbId}/actions/stop`);
 }
 
 /**
@@ -83,7 +119,8 @@ export async function resizeDatabase(
 ): Promise<void> {
     validateRequired(name, 'Database name');
     validateRequired(planID, 'Plan ID');
-    await client.post(`/v1/databases/${name}/resize`, { planID });
+    const dbId = await resolveDatabaseId(client, name);
+    await client.post(`/v1/databases/${dbId}/resize`, { planID });
 }
 
 /**
@@ -94,7 +131,8 @@ export async function createBackup(
     databaseName: string
 ): Promise<DatabaseBackup> {
     validateRequired(databaseName, 'Database name');
-    return await client.post<DatabaseBackup>(`/v1/databases/${databaseName}/backups`);
+    const dbId = await resolveDatabaseId(client, databaseName);
+    return await client.post<DatabaseBackup>(`/v1/databases/${dbId}/backups`);
 }
 
 /**
@@ -105,7 +143,8 @@ export async function listBackups(
     databaseName: string
 ): Promise<DatabaseBackup[]> {
     validateRequired(databaseName, 'Database name');
-    const response = await client.get<any>(`/v1/databases/${databaseName}/backups`);
+    const dbId = await resolveDatabaseId(client, databaseName);
+    const response = await client.get<any>(`/v1/databases/${dbId}/backups`);
     return unwrapApiResponse<DatabaseBackup[]>(response, ['backups', 'data', 'items']);
 }
 
@@ -119,8 +158,9 @@ export async function getBackupDownloadUrl(
 ): Promise<{ url: string }> {
     validateRequired(databaseName, 'Database name');
     validateRequired(backupId, 'Backup ID');
+    const dbId = await resolveDatabaseId(client, databaseName);
     return await client.get<{ url: string }>(
-        `/v1/databases/${databaseName}/backups/${backupId}/download`
+        `/v1/databases/${dbId}/backups/${backupId}/download`
     );
 }
 
@@ -150,10 +190,11 @@ interface DatabaseDetails {
     user?: string;
     password?: string;
     rootPassword?: string;
+    root_password?: string;
     database?: string;
     name?: string;
-    type: string;
-    connectionString?: string; // Some APIs return this directly
+    type?: string;
+    connectionString?: string;
     connection?: {
         host?: string;
         port?: number;
@@ -172,13 +213,18 @@ export async function getDatabaseConnection(
     databaseName: string
 ): Promise<DatabaseConnectionInfo> {
     validateRequired(databaseName, 'Database name');
-    
+
+    // Resolve database name to ID first
+    const dbId = await resolveDatabaseId(client, databaseName);
+
     const warnings: string[] = [];
-    let dbDetails: DatabaseDetails | null = null;
-    
-    // Try primary endpoint: /v1/databases/{name}
+    let dbDetails: DatabaseDetails;
+
+    // Try primary endpoint: /v1/databases/{id}
     try {
-        dbDetails = await client.get<DatabaseDetails>(`/v1/databases/${databaseName}`);
+        const response = await client.get<{ database: DatabaseDetails } | DatabaseDetails>(`/v1/databases/${dbId}`);
+        // Handle both wrapped and unwrapped responses
+        dbDetails = (response as any).database || response;
     } catch (error: any) {
         const { LiaraMcpError } = await import('../utils/errors.js');
         throw new LiaraMcpError(
@@ -192,21 +238,22 @@ export async function getDatabaseConnection(
             ]
         );
     }
-    
+
     // Try alternative endpoint for connection info if primary doesn't have password
     let connectionInfo: DatabaseDetails | null = null;
-    if (!dbDetails.password && !dbDetails.rootPassword && !dbDetails.connectionString) {
+    if (!dbDetails.password && !dbDetails.root_password && !dbDetails.rootPassword && !dbDetails.connectionString) {
         try {
             // Some APIs have a separate connection endpoint
-            connectionInfo = await client.get<DatabaseDetails>(
-                `/v1/databases/${databaseName}/connection`
+            const connResponse = await client.get<{ database: DatabaseDetails } | DatabaseDetails>(
+                `/v1/databases/${dbId}/connection`
             );
+            connectionInfo = (connResponse as any).database || connResponse;
         } catch (error: any) {
             // This endpoint might not exist, that's okay
             warnings.push('Connection-specific endpoint not available, using database details');
         }
     }
-    
+
     // Merge connection info if available
     if (connectionInfo) {
         dbDetails = {
@@ -215,7 +262,7 @@ export async function getDatabaseConnection(
             connection: connectionInfo.connection || dbDetails.connection,
         };
     }
-    
+
     // Extract connection info from nested connection object if present
     if (dbDetails.connection) {
         dbDetails = {
@@ -227,7 +274,7 @@ export async function getDatabaseConnection(
             database: dbDetails.connection.database || dbDetails.database,
         };
     }
-    
+
     // Validate we have minimum required fields
     const host = dbDetails.hostname || dbDetails.host || dbDetails.internalHostname;
     if (!host) {
@@ -244,15 +291,16 @@ export async function getDatabaseConnection(
             ]
         );
     }
-    
+
     // Extract password with better fallback logic
-    const password = dbDetails.password || 
-                    dbDetails.rootPassword || 
-                    (dbDetails.connection?.password) || 
+    const password = dbDetails.password ||
+                    dbDetails.root_password ||
+                    dbDetails.rootPassword ||
+                    dbDetails.connection?.password ||
                     '';
-    
+
     const passwordAvailable = !!password;
-    
+
     if (!passwordAvailable) {
         warnings.push(
             'Password not returned by API. You may need to:',
@@ -261,43 +309,45 @@ export async function getDatabaseConnection(
             '3. Use the password that was shown when the database was created'
         );
     }
-    
+
     // Extract username with better defaults based on database type
-    let username = dbDetails.username || 
-                  dbDetails.user || 
-                  (dbDetails.connection?.username);
-    
+    let username = dbDetails.username ||
+                  dbDetails.user ||
+                  dbDetails.connection?.username;
+
     // Set default username based on database type if not provided
+    const dbType = dbDetails.type || 'unknown';
     if (!username) {
-        switch (dbDetails.type) {
+        switch (dbType) {
             case 'postgres':
                 username = 'postgres';
                 break;
             case 'redis':
-                username = 'default'; // Redis often doesn't use usernames
+                username = 'default';
                 break;
             default:
                 username = 'root';
         }
         warnings.push(`Username not provided, using default: ${username}`);
     }
-    
+
     // Build connection info
     const connectionInfoResult: DatabaseConnectionInfo = {
         host,
-        port: dbDetails.port || getDefaultPort(dbDetails.type),
+        port: dbDetails.port || getDefaultPort(dbType),
         username,
         password,
         database: dbDetails.database || dbDetails.name || databaseName,
         connectionString: dbDetails.connectionString || buildConnectionString({
             ...dbDetails,
+            type: dbType,
             username,
             password,
         }),
         passwordAvailable,
         warnings: warnings.length > 0 ? warnings : undefined,
     };
-    
+
     return connectionInfoResult;
 }
 
@@ -321,9 +371,9 @@ function getDefaultPort(dbType: string): number {
 /**
  * Build connection string based on database type
  */
-function buildConnectionString(db: DatabaseDetails & { username?: string; password?: string }): string | undefined {
+function buildConnectionString(db: DatabaseDetails & { username?: string; password?: string; type: string }): string | undefined {
     if (!db.hostname && !db.host && !db.internalHostname) return undefined;
-    
+
     const host = db.hostname || db.host || db.internalHostname;
     const port = db.port || getDefaultPort(db.type);
     const user = db.username || db.user || 'root';
@@ -384,11 +434,12 @@ export async function resetDatabasePassword(
     newPassword?: string
 ): Promise<{ message: string; password?: string }> {
     validateRequired(databaseName, 'Database name');
-    
+    const dbId = await resolveDatabaseId(client, databaseName);
+
     try {
         // Try password reset endpoint
         const response = await client.post<{ message: string; password?: string }>(
-            `/v1/databases/${databaseName}/reset-password`,
+            `/v1/databases/${dbId}/reset-password`,
             newPassword ? { password: newPassword } : {}
         );
         return response;
@@ -396,7 +447,7 @@ export async function resetDatabasePassword(
         // Try alternative endpoint format
         try {
             const response = await client.post<{ message: string; password?: string }>(
-                `/v1/databases/${databaseName}/actions/reset-password`,
+                `/v1/databases/${dbId}/actions/reset-password`,
                 newPassword ? { password: newPassword } : {}
             );
             return response;
@@ -426,7 +477,8 @@ export async function restartDatabase(
     name: string
 ): Promise<void> {
     validateRequired(name, 'Database name');
-    await client.post(`/v1/databases/${name}/actions/restart`);
+    const dbId = await resolveDatabaseId(client, name);
+    await client.post(`/v1/databases/${dbId}/actions/restart`);
 }
 
 /**
@@ -439,8 +491,9 @@ export async function restoreBackup(
 ): Promise<{ message: string }> {
     validateRequired(databaseName, 'Database name');
     validateRequired(backupId, 'Backup ID');
+    const dbId = await resolveDatabaseId(client, databaseName);
     return await client.post<{ message: string }>(
-        `/v1/databases/${databaseName}/backups/${backupId}/restore`
+        `/v1/databases/${dbId}/backups/${backupId}/restore`
     );
 }
 
@@ -454,7 +507,8 @@ export async function deleteBackup(
 ): Promise<void> {
     validateRequired(databaseName, 'Database name');
     validateRequired(backupId, 'Backup ID');
-    await client.delete(`/v1/databases/${databaseName}/backups/${backupId}`);
+    const dbId = await resolveDatabaseId(client, databaseName);
+    await client.delete(`/v1/databases/${dbId}/backups/${backupId}`);
 }
 
 /**
@@ -485,7 +539,7 @@ export async function updateDatabase(
     }
 ): Promise<Database> {
     validateRequired(databaseName, 'Database name');
-    
+
     if (!updates.planID && !updates.version) {
         const { LiaraMcpError } = await import('../utils/errors.js');
         throw new LiaraMcpError(
@@ -494,6 +548,7 @@ export async function updateDatabase(
             { databaseName, updates }
         );
     }
-    
-    return await client.put<Database>(`/v1/databases/${databaseName}`, updates);
+
+    const dbId = await resolveDatabaseId(client, databaseName);
+    return await client.put<Database>(`/v1/databases/${dbId}`, updates);
 }

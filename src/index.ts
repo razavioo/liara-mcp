@@ -42,7 +42,7 @@ class LiaraMcpServer {
         this.server = new Server(
             {
                 name: 'liara-mcp',
-                version: '0.3.3',
+                version: '1.0.0',
             },
             {
                 capabilities: {
@@ -1466,20 +1466,6 @@ class LiaraMcpServer {
                         required: ['vmId'],
                     },
                 },
-                {
-                    name: 'liara_delete_vm',
-                    inputSchema: {
-                        type: 'object',
-                        properties: {
-                            vmId: {
-                                type: 'string',
-                                description: 'The VM ID',
-                            },
-                        },
-                        required: ['vmId'],
-                    },
-                },
-
                 {
                     name: 'liara_delete_vm',
                     description: 'Delete a virtual machine',

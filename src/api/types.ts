@@ -133,13 +133,24 @@ export interface DeployReleaseResponse {
 // Database types
 export interface Database {
     _id: string;
-    name: string;
+    id?: string;
+    hostname: string;
+    name?: string;
     type: DatabaseType;
     planID: string;
+    bundlePlanID?: string;
     status: DatabaseStatus;
     version?: string;
-    createdAt: string;
-    updatedAt: string;
+    scale?: number;
+    publicNetwork?: boolean;
+    internalPort?: number;
+    network?: {
+        _id: string;
+        name: string;
+    };
+    created_at?: string;
+    createdAt?: string;
+    updatedAt?: string;
 }
 
 export type DatabaseType =
