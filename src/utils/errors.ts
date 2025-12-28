@@ -66,7 +66,7 @@ export function validateAppName(name: string): void {
 
     if (name.length < 3) {
         throw new LiaraMcpError(
-            `App name "${name}" is too short (minimum 3 characters, got ${name.length})`,
+            `App name "${name}" is too short (3-32 characters required, got ${name.length})`,
             'INVALID_APP_NAME',
             { name, length: name.length },
             ['Use a name like "my-app" or "api-service"']
@@ -85,7 +85,7 @@ export function validateAppName(name: string): void {
     if (!/^[a-z0-9-]+$/.test(name)) {
         const invalidChars = name.match(/[^a-z0-9-]/g);
         throw new LiaraMcpError(
-            `App name contains invalid characters: ${invalidChars?.join(', ') || 'unknown'}`,
+            `App name contains invalid characters: ${invalidChars?.join(', ') || 'unknown'}. Use only lowercase letters, numbers, and hyphens.`,
             'INVALID_APP_NAME',
             { name, invalidChars },
             ['Use only lowercase letters, numbers, and hyphens', 'Example: "my-app" or "api-service"']

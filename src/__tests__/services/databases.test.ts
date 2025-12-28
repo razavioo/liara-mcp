@@ -71,33 +71,47 @@ describe('Databases Service', () => {
                     status: 'READY',
                 },
             ];
-            (mockClient.get as any).mockResolvedValue(mockBackups);
+
+            // Mock listDatabases for resolveDatabaseId
+            const mockDatabases = [{ _id: 'my-db-id', hostname: 'my-db' }];
+            (mockClient.get as any)
+                .mockResolvedValueOnce(mockDatabases) // for listDatabases call
+                .mockResolvedValueOnce(mockBackups); // for listBackups call
 
             const result = await dbService.listBackups(mockClient, 'my-db');
 
-            expect(mockClient.get).toHaveBeenCalledWith('/v1/databases/my-db/backups');
+            expect(mockClient.get).toHaveBeenCalledWith('/v1/databases');
+            expect(mockClient.get).toHaveBeenCalledWith('/v1/databases/my-db-id/backups');
             expect(result).toEqual(mockBackups);
         });
     });
 
     describe('restartDatabase', () => {
         it('should restart a database', async () => {
+            // Mock listDatabases for resolveDatabaseId
+            const mockDatabases = [{ _id: 'my-db-id', hostname: 'my-db' }];
+            (mockClient.get as any).mockResolvedValueOnce(mockDatabases);
             (mockClient.post as any).mockResolvedValue(undefined);
 
             await dbService.restartDatabase(mockClient, 'my-db');
 
-            expect(mockClient.post).toHaveBeenCalledWith('/v1/databases/my-db/actions/restart');
+            expect(mockClient.get).toHaveBeenCalledWith('/v1/databases');
+            expect(mockClient.post).toHaveBeenCalledWith('/v1/databases/my-db-id/actions/restart');
         });
     });
 
     describe('restoreBackup', () => {
         it('should restore database from backup', async () => {
+            // Mock listDatabases for resolveDatabaseId
+            const mockDatabases = [{ _id: 'my-db-id', hostname: 'my-db' }];
+            (mockClient.get as any).mockResolvedValueOnce(mockDatabases);
             (mockClient.post as any).mockResolvedValue({ message: 'Restore started' });
 
             const result = await dbService.restoreBackup(mockClient, 'my-db', 'backup-123');
 
+            expect(mockClient.get).toHaveBeenCalledWith('/v1/databases');
             expect(mockClient.post).toHaveBeenCalledWith(
-                '/v1/databases/my-db/backups/backup-123/restore'
+                '/v1/databases/my-db-id/backups/backup-123/restore'
             );
             expect(result.message).toBe('Restore started');
         });
@@ -105,12 +119,16 @@ describe('Databases Service', () => {
 
     describe('deleteBackup', () => {
         it('should delete a backup', async () => {
+            // Mock listDatabases for resolveDatabaseId
+            const mockDatabases = [{ _id: 'my-db-id', hostname: 'my-db' }];
+            (mockClient.get as any).mockResolvedValueOnce(mockDatabases);
             (mockClient.delete as any).mockResolvedValue(undefined);
 
             await dbService.deleteBackup(mockClient, 'my-db', 'backup-123');
 
+            expect(mockClient.get).toHaveBeenCalledWith('/v1/databases');
             expect(mockClient.delete).toHaveBeenCalledWith(
-                '/v1/databases/my-db/backups/backup-123'
+                '/v1/databases/my-db-id/backups/backup-123'
             );
         });
     });

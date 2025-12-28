@@ -14,8 +14,8 @@ export async function getAppMetrics(
     period?: string
 ): Promise<MetricsSummary> {
     validateAppName(appName);
-    
-    const params: Record<string, string | number | boolean> | undefined = period ? { period } : undefined;
+
+    const params: Record<string, string | number | boolean> = period ? { period } : {};
     return await client.get<MetricsSummary>(
         `/v1/projects/${appName}/metrics/summary`,
         params

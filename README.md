@@ -42,6 +42,31 @@ npm install -g liara-mcp
 
 Or use directly with npx (no installation required).
 
+## Tool Modes
+
+The Liara MCP server supports two modes for tool organization:
+
+### Consolidated Mode (Recommended)
+Set `LIARA_MCP_CONSOLIDATED=true` environment variable to enable consolidated tools. This mode provides fewer, more powerful tools that combine related functionality:
+
+- `liara_manage_app` - Complete app lifecycle management (list, get, create, delete, start, stop, restart, resize)
+- `liara_manage_env_vars` - Environment variable management (list, set single/multiple, delete single/multiple)
+- `liara_manage_databases` - Database lifecycle management (list, get, create, delete, start, stop, restart, resize, update)
+- `liara_manage_database_backups` - Database backup operations (create, list, get download URL, restore, delete)
+- `liara_manage_buckets` - Bucket lifecycle management (list, get, create, delete, get credentials)
+- `liara_manage_bucket_objects` - Bucket object operations (list, upload, get download URL, delete)
+- `liara_get_infrastructure_overview` - Get comprehensive overview of all resources
+- `liara_manage_deployment` - Deployment management (list releases, list sources)
+
+**Benefits of Consolidated Mode:**
+- **Reduced Complexity**: 8 powerful tools vs 100+ individual tools
+- **Better UX**: Single tool handles related operations with action parameter
+- **Improved Performance**: Fewer tool calls needed for complex operations
+- **Simplified Integration**: Easier to understand and use tool set
+
+### Individual Mode (Legacy)
+The default mode provides granular tools (100+ individual tools) for maximum control and specificity.
+
 ## Configuration
 
 The server supports multiple ways to configure your API token:

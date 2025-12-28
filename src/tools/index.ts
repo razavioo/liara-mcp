@@ -1,6 +1,12 @@
 /**
  * Tool definitions index - exports all tool definitions
+ * Now supports both consolidated and individual tool modes
  */
+
+// Consolidated tools (recommended for reduced complexity)
+export { getConsolidatedTools } from './consolidated-tools.js';
+
+// Individual tools (legacy mode - more granular but complex)
 export { ToolDefinition, getPaginationProperties } from './types.js';
 export { getAppTools } from './app-tools.js';
 export { getEnvTools } from './env-tools.js';
@@ -19,6 +25,7 @@ export { getUserTools } from './user-tools.js';
 export { getObservabilityTools } from './observability-tools.js';
 
 import { ToolDefinition } from './types.js';
+import { getConsolidatedTools } from './consolidated-tools.js';
 import { getAppTools } from './app-tools.js';
 import { getEnvTools } from './env-tools.js';
 import { getSettingsTools } from './settings-tools.js';
@@ -35,25 +42,35 @@ import { getNetworkTools } from './network-tools.js';
 import { getUserTools } from './user-tools.js';
 import { getObservabilityTools } from './observability-tools.js';
 
+// Configuration for tool mode
+const USE_CONSOLIDATED_TOOLS = process.env.LIARA_MCP_CONSOLIDATED === 'true';
+
 /**
  * Get all tool definitions
+ * Use LIARA_MCP_CONSOLIDATED=true env var to enable consolidated tools (default: false)
  */
 export function getAllTools(): ToolDefinition[] {
-    return [
-        ...getAppTools(),
-        ...getEnvTools(),
-        ...getSettingsTools(),
-        ...getDeploymentTools(),
-        ...getDatabaseTools(),
-        ...getStorageTools(),
-        ...getPlanTools(),
-        ...getDnsTools(),
-        ...getDomainTools(),
-        ...getMailTools(),
-        ...getVmTools(),
-        ...getDiskTools(),
-        ...getNetworkTools(),
-        ...getUserTools(),
-        ...getObservabilityTools(),
-    ];
+    if (USE_CONSOLIDATED_TOOLS) {
+        // Consolidated mode: fewer, more powerful tools
+        return getConsolidatedTools();
+    } else {
+        // Individual mode: granular tools (legacy)
+        return [
+            ...getAppTools(),
+            ...getEnvTools(),
+            ...getSettingsTools(),
+            ...getDeploymentTools(),
+            ...getDatabaseTools(),
+            ...getStorageTools(),
+            ...getPlanTools(),
+            ...getDnsTools(),
+            ...getDomainTools(),
+            ...getMailTools(),
+            ...getVmTools(),
+            ...getDiskTools(),
+            ...getNetworkTools(),
+            ...getUserTools(),
+            ...getObservabilityTools(),
+        ];
+    }
 }

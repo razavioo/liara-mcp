@@ -1,0 +1,15 @@
+{
+  "platform": "docker",
+  "app": "apkarchitect",
+  "port": 8080,
+  "env": {
+    "API_PORT": "8080",
+    "WORKER_PORT": "8081",
+    "WORKER_URL": "http://localhost:8081"
+  },
+  "healthCheck": {
+    "command": "wget --no-verbose --tries=1 --spider http://localhost:8080/health",
+    "interval": 30,
+    "timeout": 10
+  }
+}
